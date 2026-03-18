@@ -577,7 +577,7 @@ def signup():
             import traceback
             print("SIGNUP ERROR:", e)
             traceback.print_exc()
-    return "Signup failed. Please try again."
+            return "Signup failed. Please try again."
 
     return render_template("signup.html", error=None)
 
