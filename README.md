@@ -1,5 +1,7 @@
 # AutoOps AI – Self-Healing Infrastructure Monitor
 
+🔗 Live Demo: https://autoops-ai-92w3.onrender.com/
+
 Polished, production-ready Flask application that monitors system metrics, exposes JSON APIs, and demonstrates **safe self-healing automation** with guardrails, **metrics history**, and a deterministic “AI-like” explanation layer.
 
 Built to look and feel like a real DevOps/System Engineering product—simple, fast, and easy to explain in interviews.
