@@ -20,6 +20,10 @@ const cpuLevelEl = document.getElementById("cpu-level");
 const memoryLevelEl = document.getElementById("memory-level");
 const diskLevelEl = document.getElementById("disk-level");
 
+const cpuPillEl = document.getElementById("cpu-pill");
+const memoryPillEl = document.getElementById("memory-pill");
+const diskPillEl = document.getElementById("disk-pill");
+
 const insightSummaryEl = document.getElementById("insight-summary");
 const insightRecoEl = document.getElementById("insight-reco");
 const thresholdHintEl = document.getElementById("threshold-hint");
@@ -30,12 +34,22 @@ const processesBodyEl = document.getElementById("processes-body");
 const logsContainerEl = document.getElementById("logs-container");
 const refreshLogsBtn = document.getElementById("refresh-logs-btn");
 
+const historyStatusEl = document.getElementById("history-status");
+const cpuChartCanvas = document.getElementById("cpuChart");
+
 let latestThresholds = { warning: null, critical: null };
 
 function levelLabel(level) {
   if (level === "green") return "Green (Normal)";
   if (level === "yellow") return "Yellow (Warning)";
   if (level === "red") return "Red (Critical)";
+  return "--";
+}
+
+function pillText(level) {
+  if (level === "green") return "NORMAL";
+  if (level === "yellow") return "WARNING";
+  if (level === "red") return "CRITICAL";
   return "--";
 }
 
@@ -46,10 +60,28 @@ function applyLevelClass(cardEl, level) {
   if (level === "red") cardEl.classList.add("level-red");
 }
 
+function applyPill(pillEl, level) {
+  if (!pillEl) return;
+  pillEl.classList.remove("pill-green", "pill-yellow", "pill-red");
+  if (level === "green") pillEl.classList.add("pill-green");
+  if (level === "yellow") pillEl.classList.add("pill-yellow");
+  if (level === "red") pillEl.classList.add("pill-red");
+  pillEl.textContent = pillText(level);
+}
+
 function setMetric(cardEl, valueEl, barEl, value) {
   const safeValue = Math.max(0, Math.min(100, value || 0));
   valueEl.textContent = `${safeValue.toFixed(1)} %`;
   barEl.style.width = `${safeValue}%`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function renderAlerts(actions, metrics) {
@@ -72,6 +104,80 @@ function renderAlerts(actions, metrics) {
     `;
     alertsContainerEl.appendChild(div);
   });
+}
+
+let cpuChart = null;
+
+function initChart() {
+  if (!cpuChartCanvas || !window.Chart) return;
+
+  const ctx = cpuChartCanvas.getContext("2d");
+  cpuChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "CPU %",
+          data: [],
+          tension: 0.35,
+          borderWidth: 2,
+          borderColor: "rgba(56, 189, 248, 0.95)",
+          backgroundColor: "rgba(56, 189, 248, 0.12)",
+          fill: true,
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 450 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true },
+      },
+      scales: {
+        x: {
+          ticks: { color: "rgba(148, 163, 184, 0.9)", maxTicksLimit: 6 },
+          grid: { color: "rgba(148, 163, 184, 0.12)" },
+        },
+        y: {
+          suggestedMin: 0,
+          suggestedMax: 100,
+          ticks: { color: "rgba(148, 163, 184, 0.9)" },
+          grid: { color: "rgba(148, 163, 184, 0.12)" },
+        },
+      },
+    },
+  });
+}
+
+function updateChartFromHistory(history) {
+  if (!cpuChart || !history || history.length === 0) return;
+  const labels = history.map((h) => {
+    const d = new Date(h.timestamp);
+    return d.toLocaleTimeString();
+  });
+  const values = history.map((h) => Number(h.metrics?.cpu || 0));
+  cpuChart.data.labels = labels;
+  cpuChart.data.datasets[0].data = values;
+  cpuChart.update();
+}
+
+async function fetchHistory() {
+  if (!cpuChart) return;
+  try {
+    const res = await fetch("/history?limit=60");
+    if (!res.ok) throw new Error(`Failed to fetch /history: ${res.status}`);
+    const data = await res.json();
+    const history = data.history || [];
+    updateChartFromHistory(history);
+    if (historyStatusEl) historyStatusEl.textContent = `Points: ${history.length}`;
+  } catch (err) {
+    console.error(err);
+    if (historyStatusEl) historyStatusEl.textContent = "History: error";
+  }
 }
 
 async function fetchStats() {
@@ -103,6 +209,16 @@ async function fetchStats() {
     if (cpuLevelEl) cpuLevelEl.textContent = `Level: ${levelLabel(cpuLevel)}`;
     if (memoryLevelEl) memoryLevelEl.textContent = `Level: ${levelLabel(memLevel)}`;
     if (diskLevelEl) diskLevelEl.textContent = `Level: ${levelLabel(diskLevel)}`;
+
+    applyPill(cpuPillEl, cpuLevel);
+    applyPill(memoryPillEl, memLevel);
+    applyPill(diskPillEl, diskLevel);
+
+    // Pulse effect for critical states
+    document.body.classList.toggle(
+      "has-critical",
+      cpuLevel === "red" || memLevel === "red" || diskLevel === "red"
+    );
 
     if (insightSummaryEl) insightSummaryEl.textContent = `Summary: ${explanation?.summary || "--"}`;
     if (insightRecoEl) insightRecoEl.textContent = `Recommendation: ${explanation?.recommendation || "--"}`;
@@ -163,16 +279,17 @@ async function fetchLogs() {
     const res = await fetch("/logs");
     if (!res.ok) throw new Error(`Failed to fetch /logs: ${res.status}`);
     const data = await res.json();
-    const lines = data.lines || [];
+    const entries = data.entries || [];
 
-    if (lines.length === 0) {
+    if (entries.length === 0) {
       logsContainerEl.innerHTML =
         '<div class="muted-text">No log entries yet. Self-healing actions will appear here.</div>';
       return;
     }
 
     logsContainerEl.innerHTML = "";
-    lines.forEach((line) => {
+    entries.forEach((e) => {
+      const line = e.raw || e.message || "";
       const div = document.createElement("div");
       div.className = classifyLogLine(line);
       div.textContent = line;
@@ -189,11 +306,14 @@ async function fetchLogs() {
 
 function startPolling() {
   // Initial fetch so the UI updates quickly on first load.
+  initChart();
   fetchStats();
+  fetchHistory();
   fetchProcesses();
   fetchLogs();
 
   setInterval(fetchStats, REFRESH_INTERVAL_MS);
+  setInterval(fetchHistory, REFRESH_INTERVAL_MS);
   setInterval(fetchProcesses, REFRESH_INTERVAL_MS);
   setInterval(fetchLogs, LOGS_REFRESH_INTERVAL_MS);
 }

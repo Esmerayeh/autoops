@@ -17,6 +17,7 @@
       <div class="header-meta">
         <span class="badge">Flask + psutil</span>
         <span class="badge badge-secondary">Refresh: 2s</span>
+        <a class="badge badge-link" href="{{ url_for('logout') }}">Logout</a>
       </div>
     </header>
 
@@ -29,7 +30,11 @@
         </div>
         <div class="metrics-grid">
           <div class="metric-card" id="cpu-card">
-            <h3>CPU Usage</h3>
+            <h3 class="metric-title">
+              <span class="metric-icon" aria-hidden="true">⚙</span>
+              CPU Usage
+              <span class="status-pill" id="cpu-pill">--</span>
+            </h3>
             <div class="metric-value" id="cpu-value">-- %</div>
             <div class="progress-bar">
               <div class="progress-bar-inner" id="cpu-bar"></div>
@@ -38,7 +43,11 @@
           </div>
 
           <div class="metric-card" id="memory-card">
-            <h3>Memory Usage</h3>
+            <h3 class="metric-title">
+              <span class="metric-icon" aria-hidden="true">🧠</span>
+              Memory Usage
+              <span class="status-pill" id="memory-pill">--</span>
+            </h3>
             <div class="metric-value" id="memory-value">-- %</div>
             <div class="progress-bar">
               <div class="progress-bar-inner" id="memory-bar"></div>
@@ -47,13 +56,28 @@
           </div>
 
           <div class="metric-card" id="disk-card">
-            <h3>Disk Usage</h3>
+            <h3 class="metric-title">
+              <span class="metric-icon" aria-hidden="true">💾</span>
+              Disk Usage
+              <span class="status-pill" id="disk-pill">--</span>
+            </h3>
             <div class="metric-value" id="disk-value">-- %</div>
             <div class="progress-bar">
               <div class="progress-bar-inner" id="disk-bar"></div>
             </div>
             <div class="threshold-text" id="disk-level">Level: --</div>
           </div>
+        </div>
+      </section>
+
+      <!-- CPU history chart -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>CPU Usage History</h2>
+          <span class="muted-text" id="history-status">Loading history...</span>
+        </div>
+        <div class="chart-shell">
+          <canvas id="cpuChart" height="90"></canvas>
         </div>
       </section>
 
@@ -125,6 +149,7 @@
       <span>Flask • psutil • Vanilla JS</span>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
   </html>

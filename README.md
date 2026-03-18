@@ -1,6 +1,8 @@
 # AutoOps AI – Self-Healing Infrastructure Monitor
 
-Production-ready Flask application that monitors system metrics, exposes JSON APIs, and demonstrates **real self-healing** automation with safety guardrails plus an AI-like explanation/recommendation layer.
+Polished, production-ready Flask application that monitors system metrics, exposes JSON APIs, and demonstrates **safe self-healing automation** with guardrails, **metrics history**, and a deterministic “AI-like” explanation layer.
+
+Built to look and feel like a real DevOps/System Engineering product—simple, fast, and easy to explain in interviews.
 
 ## Features
 
@@ -8,152 +10,177 @@ Production-ready Flask application that monitors system metrics, exposes JSON AP
   - CPU usage
   - Memory usage
   - Disk usage
+- **Metrics history (last 50–100 points)**:
+  - In-memory fixed-size queue (no DB)
+  - `GET /history` for past snapshots
+  - CPU line chart on the dashboard (Chart.js)
 - **JSON APIs**:
-  - `GET /stats` – live metrics + alert levels + AI-like explanation + self-healing actions
-  - `GET /processes` – top CPU-consuming processes
-  - `GET /logs` – recent log lines from `logs/system.log`
-- **Dashboard UI (Flask templates + static assets)**:
-  - Auto-refreshing cards for CPU, memory, and disk usage (every 2 seconds)
-  - 3 alert levels: **Green (Normal)**, **Yellow (Warning ≥ 70%)**, **Red (Critical ≥ 85%)**
-  - Color-coded indicators on metric cards
-  - Live table of top CPU processes
-  - Logs panel for alerts/actions and API request logs
-- **Real self-healing (with safety handling)**:
-  - If CPU **Critical (≥ 85%)**: identify the top CPU-consuming process and attempt to terminate it:
-    - Windows: `taskkill /PID <pid> /F`
-    - Linux/macOS: `kill -9 <pid>`
-  - **Protected process list** prevents terminating known critical system processes.
-  - All actions are logged to `logs/system.log`.
+  - `GET /stats` – live metrics + alert levels + explanation + recent actions
+  - `GET /history` – past metric snapshots (chart-friendly)
+  - `GET /processes` – top CPU-consuming processes (safe fields only)
+  - `GET /logs` – structured log entries from `logs/system.log`
+- **Smart alert system**:
+  - Green (Normal), Yellow (Warning ≥ 70%), Red (Critical ≥ 85%)
+  - Color-coded cards + critical pulse/glow
+- **Self-healing (safe by design)**:
+  - If CPU is **Critical (≥ 85%)**:
+    - Identifies the top CPU-consuming process
+    - **Rate-limited** (max 1 termination per 30s by default)
+    - **Never** terminates protected PIDs (0/1) or protected process names
+    - Performs **real termination locally** when enabled:
+      - Windows: `taskkill /PID <pid> /F`
+      - Linux/macOS: `kill -9 <pid>`
+    - Falls back to **safe simulation** in cloud/sandbox environments via:
+      - `AUTOOPS_ENABLE_SELF_HEALING=false`
+- **Basic authentication (session-based)**:
+  - `/login`, `/logout`
+  - Protects dashboard and APIs
 - **Production-ready basics**:
   - `requirements.txt`
-  - Gunicorn-compatible `app:app` entrypoint
+  - Gunicorn-compatible `app:app`
+  - Dockerfile for containerized runs
 
 ---
 
 ## Project Structure
 
 ```text
-app.py              # Flask application (APIs, self-healing, logging)
+app.py              # Flask app (APIs, auth, self-healing, sampler)
+Dockerfile          # Container build (gunicorn)
 requirements.txt    # Python dependencies
 logs/
-  └── system.log    # Generated at runtime, holds alerts/actions/request logs
+  └── system.log    # Runtime logs (alerts/actions/requests)
 templates/
-  └── index.html    # Main dashboard (Flask template)
+  ├── index.html    # Dashboard (Flask template)
+  └── login.html    # Login page
 static/
-  ├── style.css     # Dashboard styling
-  └── app.js        # Frontend logic (polling, DOM updates)
+  ├── style.css     # Premium dark UI
+  └── app.js        # Polling + Chart.js updates
 ```
 
 ---
 
-## Running Locally
+## Architecture (simple)
 
-### 1. Create and activate a virtual environment (recommended)
+```text
+Browser (UI)
+  ├─ polls /stats, /processes, /logs every 2–5s
+  └─ polls /history for the CPU chart
+
+Flask API
+  ├─ /login, /logout (session auth)
+  ├─ /stats (fast: uses latest sampled snapshot)
+  ├─ /history (in-memory deque, max 50–100 points)
+  ├─ /processes (top CPU processes, safe fields only)
+  └─ /logs (tail + parse logs/system.log)
+
+Background sampler thread (every 2s)
+  ├─ collects psutil stats (low overhead)
+  ├─ appends to in-memory history (fixed-size)
+  └─ evaluates self-healing rules (rate-limited + protected list)
+```
+
+---
+
+## Screenshots
+
+Add screenshots to `docs/screenshots/` and reference them here:
+
+- `docs/screenshots/dashboard.png`
+- `docs/screenshots/login.png`
+
+---
+
+## Local Setup
 
 ```bash
 cd /path/to/this/project
-
 python -m venv .venv
 
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
 
-# Or Command Prompt
-.venv\Scripts\activate.bat
+pip install -r requirements.txt
+python app.py
 ```
 
-### 2. Install dependencies
+Open `http://127.0.0.1:5000/`.
+
+### Default login
+
+- Username: `admin`
+- Password: `admin123`
+
+Override via environment variables:
+
+- `AUTOOPS_USERNAME`
+- `AUTOOPS_PASSWORD`
+
+---
+
+## Deployment on Render
+
+Create a Render **Web Service**.
+
+- **Build Command**:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run the Flask development server
-
-```bash
-python app.py
-```
-
-By default the app will start on `http://127.0.0.1:5000/`.
-
-Open your browser and navigate to:
-
-- `http://127.0.0.1:5000/` – monitoring dashboard
-- `http://127.0.0.1:5000/stats` – raw metrics JSON
-- `http://127.0.0.1:5000/processes` – top processes JSON
-- `http://127.0.0.1:5000/logs` – recent actions JSON
-
-> Note: The self-healing logic is intentionally **non-destructive**. It logs what *would* happen (e.g., a process termination) rather than actually killing processes.
-
-This project **can perform real termination** when enabled and when the target is not protected. Use it carefully.
-
----
-
-## Deploying on Render
-
-You can deploy this app as a **Web Service** on Render.
-
-### 1. Push code to GitHub
-
-1. Create a new Git repository (if needed) and commit this project.
-2. Push it to a GitHub repository.
-
-### 2. Create a new Render Web Service
-
-1. Log in to Render and choose **New → Web Service**.
-2. Connect your GitHub repo that contains this project.
-3. Select your branch and click **Create Web Service**.
-
-### 3. Configure Render build & start commands
-
-- **Environment**: `Python`
-- **Build Command**:
-
-  ```bash
-  pip install -r requirements.txt
-  ```
-
 - **Start Command**:
 
-  ```bash
-  gunicorn app:app
-  ```
+```bash
+gunicorn app:app --bind 0.0.0.0:$PORT
+```
 
-Render will:
+### Required environment variables (Render)
 
-- Install dependencies from `requirements.txt`
-- Start the app with Gunicorn using the `app` object in `app.py`
-- Expose the web service via a public URL
+- `AUTOOPS_SECRET_KEY` (set a strong value)
+- `AUTOOPS_USERNAME`
+- `AUTOOPS_PASSWORD`
+- `AUTOOPS_ENABLE_SELF_HEALING=false` (cloud-safe)
 
-Once deployed, you can use the provided Render URL in place of `http://127.0.0.1:5000/`.
-
-### Environment variables (optional)
+### Optional environment variables
 
 - `AUTOOPS_WARNING_THRESHOLD` (default `70`)
 - `AUTOOPS_CRITICAL_THRESHOLD` (default `85`)
-- `AUTOOPS_ENABLE_SELF_HEALING` (default `true`)
-
-> On hosted environments/containers, process termination may fail due to permissions or isolation. The app will log the failure gracefully.
+- `AUTOOPS_KILL_COOLDOWN_SECONDS` (default `30`)
+- `AUTOOPS_SAMPLE_INTERVAL_SECONDS` (default `2`)
+- `AUTOOPS_MAX_HISTORY_POINTS` (default `100`, clamped to 50–100)
 
 ---
 
-## Explaining This Project in an Interview
+## Docker
 
-- **System engineering concepts**:
-  - Uses `psutil` to read OS-level metrics (CPU, memory, disk, processes).
-  - Demonstrates how to expose operational metrics via HTTP APIs.
-- **API design**:
-  - `/stats` aggregates metrics and self-healing actions for the UI.
-  - `/processes` returns structured process data suitable for charts/tables.
-  - `/logs` streams recent operational events from `system.log`.
-- **Self-healing / automation**:
-  - Implements threshold-based alerting with 3 severity levels.
-  - Demonstrates safe automation: attempts termination for CPU-critical events while preventing critical system processes from being killed.
-  - Logs all actions and request traces for auditability.
-- **Frontend integration**:
-  - Vanilla JS polls APIs every 2 seconds and updates the DOM.
-  - Visual alerts communicate when metrics cross thresholds.
-  - Logs viewer lets you correlate actions with system state.
+```bash
+docker build -t autoops-ai .
+docker run -p 5000:5000 ^
+  -e AUTOOPS_SECRET_KEY="change-me" ^
+  -e AUTOOPS_USERNAME="admin" ^
+  -e AUTOOPS_PASSWORD="admin123" ^
+  -e AUTOOPS_ENABLE_SELF_HEALING="true" ^
+  autoops-ai
+```
 
-From here you can extend it with authentication, historical charts (time-series DB), real process management, or integration with alerting tools.
+---
+
+## API Endpoints
+
+- `GET /stats`
+- `GET /history?limit=60`
+- `GET /processes`
+- `GET /logs`
+- `GET /login`, `POST /login`, `GET /logout`
+
+---
+
+## Interview talking points
+
+- **System design**: background sampler keeps APIs fast (<200ms typical) and avoids blocking requests
+- **Safety**: protected process list + PID blacklist + cooldown rate limiting
+- **Cloud constraints**: self-healing disabled by env (`AUTOOPS_ENABLE_SELF_HEALING=false`) to respect sandbox limitations
+- **Observability**: structured logs + request logging + action events
+- **Explainability**: deterministic rules generate “what happened / why / what to do next” insights
+
 

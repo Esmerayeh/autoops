@@ -12,6 +12,10 @@ body {
   color: #f7f7ff;
 }
 
+body.has-critical .app-header {
+  box-shadow: 0 0 38px rgba(248, 113, 113, 0.25);
+}
+
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -56,6 +60,14 @@ body {
   background: rgba(148, 163, 184, 0.18);
   color: #e5e7eb;
   border-color: rgba(148, 163, 184, 0.5);
+}
+
+.badge-link {
+  text-decoration: none;
+}
+
+.badge-link:hover {
+  border-color: rgba(248, 250, 252, 0.95);
 }
 
 .app-main {
@@ -133,6 +145,69 @@ body {
   font-size: 0.95rem;
 }
 
+.metric-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.metric-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.45rem;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  margin-right: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.status-pill {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: rgba(15, 23, 42, 0.85);
+  color: rgba(226, 232, 240, 0.9);
+  text-transform: uppercase;
+}
+
+.pill-green {
+  border-color: rgba(34, 197, 94, 0.8);
+  color: rgba(187, 247, 208, 0.95);
+}
+
+.pill-yellow {
+  border-color: rgba(251, 191, 36, 0.9);
+  color: rgba(254, 243, 199, 0.95);
+}
+
+.pill-red {
+  border-color: rgba(248, 113, 113, 0.9);
+  color: rgba(254, 202, 202, 0.98);
+  box-shadow: 0 0 18px rgba(248, 113, 113, 0.22);
+}
+
+.metric-card.level-red {
+  animation: pulseCritical 1.45s ease-in-out infinite;
+}
+
+@keyframes pulseCritical {
+  0% {
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7), 0 0 0 rgba(248, 113, 113, 0);
+  }
+  50% {
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7), 0 0 24px rgba(248, 113, 113, 0.22);
+  }
+  100% {
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7), 0 0 0 rgba(248, 113, 113, 0);
+  }
+}
+
 .metric-value {
   font-size: 1.5rem;
   font-weight: 600;
@@ -191,6 +266,16 @@ body {
   color: rgba(226, 232, 240, 0.92);
   font-size: 0.86rem;
   line-height: 1.3;
+}
+
+/* Chart */
+.chart-shell {
+  position: relative;
+  height: 220px;
+  padding: 0.35rem 0.35rem;
+  border-radius: 0.9rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 /* Alerts */
@@ -322,6 +407,111 @@ td {
 
 .btn-ghost {
   background: transparent;
+}
+
+.btn-primary {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #e0f2fe;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  border-color: rgba(56, 189, 248, 0.95);
+}
+
+/* Auth (login) */
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  border-radius: 1.1rem;
+  padding: 1.3rem 1.2rem 1.2rem;
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  box-shadow: 0 18px 60px rgba(2, 6, 23, 0.75);
+}
+
+.auth-header {
+  margin-bottom: 0.8rem;
+}
+
+.auth-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.auth-subtitle {
+  margin-top: 0.25rem;
+  color: rgba(148, 163, 184, 0.88);
+  font-size: 0.88rem;
+}
+
+.auth-error {
+  margin: 0.7rem 0;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.7rem;
+  background: rgba(127, 29, 29, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.85);
+  font-size: 0.85rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.auth-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.55);
+  color: #f8fafc;
+  outline: none;
+}
+
+.auth-input:focus {
+  border-color: rgba(56, 189, 248, 0.75);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+.auth-hint {
+  margin-top: 0.85rem;
+  color: rgba(148, 163, 184, 0.85);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.auth-hint code {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.08rem 0.35rem;
+  border-radius: 0.45rem;
+}
+
+.auth-link {
+  color: rgba(56, 189, 248, 0.95);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
 }
 
 /* Responsive adjustments */
