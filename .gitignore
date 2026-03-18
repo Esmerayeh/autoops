@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Logs (generated at runtime)
+logs/
+system.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
