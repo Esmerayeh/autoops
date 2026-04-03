@@ -4,6 +4,8 @@ Live Demo: https://autoops-ai-92w3.onrender.com/
 
 AutoOps AI is a polished AIOps platform built with Flask, SQLite, psutil, SQLAlchemy, and a premium observability dashboard. It keeps the original local-first simplicity, but upgrades the project into a resume-ready platform that demonstrates backend architecture, SRE thinking, security engineering, analytics design, and careful self-healing automation.
 
+For Render deploys, pin Python with the repo-root `.python-version` file or set `PYTHON_VERSION=3.12.8` in the service environment. This app is currently validated against Python 3.12 for best dependency compatibility.
+
 ## Why this project matters
 
 This project shows how to evolve a simple monitoring dashboard into an explainable operations platform:
