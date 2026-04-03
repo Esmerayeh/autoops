@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}AutoOps AI Dashboard{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AO</div>
+      <div>
+        <div class="brand-title">AutoOps AI</div>
+        <div class="brand-subtitle">Self-Healing Observability</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-link active" href="#overview">Overview</a>
+      <a class="nav-link" href="#analytics">Analytics</a>
+      <a class="nav-link" href="#actions">Remediation</a>
+      <a class="nav-link" href="#processes">Processes</a>
+      <a class="nav-link" href="#logs">Logs</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="meta-label">Signed in as</div>
+      <div class="meta-value">{{ current_user.username }}</div>
+      <div class="meta-label">Role</div>
+      <div class="meta-value">{{ current_user.role }}</div>
+      <a class="ghost-link" href="{{ url_for('auth.logout') }}">Logout</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h1>Production-grade AIOps control plane</h1>
+        <p>Live telemetry, explainable recommendations, and guarded self-healing workflows.</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="toggle">
+          <input type="checkbox" id="auto-refresh-toggle" checked />
+          <span>Auto refresh</span>
+        </label>
+        <select id="time-range-select" class="select-input">
+          <option value="30">30 points</option>
+          <option value="60" selected>60 points</option>
+          <option value="120">120 points</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="status-strip" id="overview">
+      <div class="status-chip"><span>Environment</span><strong id="status-environment">--</strong></div>
+      <div class="status-chip"><span>Sampler</span><strong id="status-sampler">--</strong></div>
+      <div class="status-chip"><span>Healing</span><strong id="status-healing">--</strong></div>
+      <div class="status-chip status-wide"><span>Last action</span><strong id="status-last-action">Waiting for first remediation event</strong></div>
+    </section>
+
+    <section class="hero-grid">
+      <div class="health-card glass-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">System health score</p>
+            <h2 id="health-score">--</h2>
+          </div>
+          <span class="badge" id="ml-mode-badge">Mode: --</span>
+        </div>
+        <p id="health-summary">Collecting telemetry...</p>
+        <div class="mini-stats">
+          <div><span>Anomaly score</span><strong id="anomaly-score">--</strong></div>
+          <div><span>Confidence</span><strong id="anomaly-confidence">--</strong></div>
+          <div><span>Risk</span><strong id="risk-score">--</strong></div>
+          <div><span>API p95</span><strong id="latency-p95">--</strong></div>
+        </div>
+      </div>
+
+      <div class="glass-card host-panel">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Host summary</p>
+            <h2 id="host-name">--</h2>
+          </div>
+          <span class="badge badge-secondary" id="host-platform">--</span>
+        </div>
+        <div class="host-grid">
+          <div><span>CPU cores</span><strong id="host-cpu-count">--</strong></div>
+          <div><span>Boot time</span><strong id="host-boot-time">--</strong></div>
+          <div><span>Runtime PID</span><strong id="host-pid">--</strong></div>
+          <div><span>ML mode</span><strong id="host-ml-mode">--</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="command-center-grid" id="command-center">
+      <div class="glass-card command-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">AI Command Center</p>
+            <h2>Decision engine</h2>
+          </div>
+          <span class="badge" id="decision-badge">Awaiting decision</span>
+        </div>
+        <div class="command-grid">
+          <div><span>Decision</span><strong id="decision-result">--</strong></div>
+          <div><span>Confidence</span><strong id="decision-confidence">--</strong></div>
+          <div><span>Safety</span><strong id="decision-safety">--</strong></div>
+          <div><span>Chosen action</span><strong id="decision-action">--</strong></div>
+        </div>
+        <p id="decision-why" class="reasoning-copy">The autonomous loop will explain why it chose its current posture.</p>
+      </div>
+
+      <div class="glass-card command-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Autonomy mode</p>
+            <h2>Human-in-the-loop control</h2>
+          </div>
+        </div>
+        <div class="toolbar">
+          <select id="autonomy-mode-select" class="select-input">
+            <option value="manual">Manual</option>
+            <option value="assisted">Assisted</option>
+            <option value="autonomous">Autonomous</option>
+          </select>
+          <button id="save-autonomy-mode" class="button button-secondary" type="button">Update mode</button>
+        </div>
+        <div class="command-grid">
+          <div><span>Recent auto actions</span><strong id="autonomy-actions-count">--</strong></div>
+          <div><span>Confidence gate</span><strong id="autonomy-confidence-gate">--</strong></div>
+          <div><span>Safety gate</span><strong id="autonomy-safety-gate">--</strong></div>
+          <div><span>Feedback success</span><strong id="autonomy-feedback-rate">--</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="command-center-grid">
+      <div class="glass-card timeline-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Active incidents</p>
+            <h2>Incident lifecycle</h2>
+          </div>
+        </div>
+        <div id="incident-list" class="timeline-list empty-state">No active incidents.</div>
+      </div>
+      <div class="glass-card timeline-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">AI reasoning</p>
+            <h2>Why the system decided this</h2>
+          </div>
+        </div>
+        <div id="reasoning-panel" class="reasoning-stack empty-state">Waiting for the next decision cycle.</div>
+      </div>
+    </section>
+
+    <section class="command-center-grid">
+      <div class="glass-card chart-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Action validation</p>
+            <h2>Before vs after healing</h2>
+          </div>
+          <span class="badge badge-secondary" id="validation-badge">No validation yet</span>
+        </div>
+        <canvas id="validation-chart" height="140"></canvas>
+      </div>
+      <div class="glass-card timeline-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Feedback learning</p>
+            <h2>How AutoOps improves</h2>
+          </div>
+        </div>
+        <div class="command-grid">
+          <div><span>Success rate</span><strong id="feedback-success-rate">--</strong></div>
+          <div><span>False positives</span><strong id="feedback-false-rate">--</strong></div>
+          <div><span>Recurrence</span><strong id="feedback-recurrence-rate">--</strong></div>
+          <div><span>Records</span><strong id="feedback-record-count">--</strong></div>
+        </div>
+        <div id="feedback-list" class="timeline-list empty-state">No feedback records yet.</div>
+      </div>
+    </section>
+
+    <section class="metrics-grid">
+      <article class="metric-card glass-card">
+        <div class="card-header">
+          <p class="eyebrow">CPU utilization</p>
+          <span class="metric-badge" id="cpu-anomaly">Normal</span>
+        </div>
+        <div class="metric-value" id="cpu-value">--%</div>
+        <div class="metric-trend" id="cpu-trend">Trend: --</div>
+        <div class="progress-track"><div class="progress-fill" id="cpu-bar"></div></div>
+      </article>
+      <article class="metric-card glass-card">
+        <div class="card-header">
+          <p class="eyebrow">Memory pressure</p>
+          <span class="metric-badge" id="memory-anomaly">Normal</span>
+        </div>
+        <div class="metric-value" id="memory-value">--%</div>
+        <div class="metric-trend" id="memory-trend">Trend: --</div>
+        <div class="progress-track"><div class="progress-fill" id="memory-bar"></div></div>
+      </article>
+      <article class="metric-card glass-card">
+        <div class="card-header">
+          <p class="eyebrow">Disk usage</p>
+          <span class="metric-badge" id="disk-anomaly">Normal</span>
+        </div>
+        <div class="metric-value" id="disk-value">--%</div>
+        <div class="metric-trend" id="disk-trend">Trend: --</div>
+        <div class="progress-track"><div class="progress-fill" id="disk-bar"></div></div>
+      </article>
+      <article class="metric-card glass-card">
+        <div class="card-header">
+          <p class="eyebrow">Network throughput</p>
+          <span class="metric-badge" id="network-anomaly">Live</span>
+        </div>
+        <div class="metric-value" id="network-value">--</div>
+        <div class="metric-trend" id="network-trend">Trend: --</div>
+        <div class="progress-track"><div class="progress-fill neutral" id="network-bar"></div></div>
+      </article>
+    </section>
+
+    <section class="chart-grid" id="analytics">
+      <div class="glass-card chart-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Telemetry</p>
+            <h2>CPU, memory, disk, network</h2>
+          </div>
+        </div>
+        <canvas id="telemetry-chart" height="120"></canvas>
+      </div>
+      <div class="glass-card recommendations-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Explainable recommendation</p>
+            <h2 id="recommendation-title">Awaiting analysis</h2>
+          </div>
+          <span class="badge badge-warning" id="forecast-chip">Forecast pending</span>
+        </div>
+        <p id="recommendation-reasoning">The analytics engine will explain anomalies, probable causes, and next actions here.</p>
+        <div class="cause-list" id="cause-list"></div>
+        <div class="action-list" id="recommendation-actions"></div>
+      </div>
+    </section>
+
+    <section class="dual-grid" id="actions">
+      <div class="glass-card timeline-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Alert timeline</p>
+            <h2>Correlated alerts</h2>
+          </div>
+        </div>
+        <div id="alert-timeline" class="timeline-list empty-state">No active alerts yet.</div>
+      </div>
+      <div class="glass-card timeline-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Healing actions</p>
+            <h2>Guarded remediation history</h2>
+          </div>
+        </div>
+        <div id="actions-timeline" class="timeline-list empty-state">No healing actions recorded yet.</div>
+      </div>
+    </section>
+
+    <section class="dual-grid" id="processes">
+      <div class="glass-card table-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Processes</p>
+            <h2>Top resource consumers</h2>
+          </div>
+          <input id="process-search" class="text-input" placeholder="Filter processes" />
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="pid">PID</th>
+                <th data-sort="name">Name</th>
+                <th data-sort="cpu_percent">CPU %</th>
+                <th data-sort="memory_percent">Mem %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="processes-body">
+              <tr><td colspan="5">Loading process data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="glass-card table-card" id="logs">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Structured logs</p>
+            <h2>Operational events</h2>
+          </div>
+          <div class="toolbar">
+            <select id="log-level-filter" class="select-input">
+              <option value="">All levels</option>
+              <option value="INFO">INFO</option>
+              <option value="WARNING">WARNING</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+            <button id="refresh-logs-btn" class="button button-secondary" type="button">Refresh</button>
+          </div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Level</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body">
+              <tr><td colspan="3">Waiting for log data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

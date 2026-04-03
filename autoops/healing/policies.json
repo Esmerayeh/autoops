@@ -1,0 +1,26 @@
+[
+  {
+    "name": "cpu_kill_hot_process",
+    "metric": "cpu",
+    "threshold": 90,
+    "action_type": "kill_process",
+    "escalation_level": 2,
+    "requires_confirmation": true
+  },
+  {
+    "name": "memory_manual_recommendation",
+    "metric": "memory",
+    "threshold": 85,
+    "action_type": "recommend_manual_action",
+    "escalation_level": 1,
+    "requires_confirmation": false
+  },
+  {
+    "name": "disk_cache_cleanup",
+    "metric": "disk",
+    "threshold": 92,
+    "action_type": "clear_temp",
+    "escalation_level": 2,
+    "requires_confirmation": true
+  }
+]

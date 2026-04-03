@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}AutoOps AI Login{% endblock %}
+{% block body %}
+<div class="auth-page">
+  <div class="auth-panel auth-marketing">
+    <div class="auth-badge">AIOps Platform</div>
+    <h1>Detect anomalies early. Heal safely. Explain every decision.</h1>
+    <p>
+      AutoOps AI blends infrastructure telemetry, alert correlation, and policy-based remediation into one
+      premium control plane built for SRE, backend, and platform engineering interviews.
+    </p>
+    <ul class="feature-list">
+      <li>Explainable analytics with rule fallback and optional ML mode</li>
+      <li>Policy-based healing with dry-run, cooldowns, and operator confirmation</li>
+      <li>Structured observability dashboards with alerts, actions, and forecasts</li>
+    </ul>
+  </div>
+  <div class="auth-panel auth-form-panel">
+    <div class="auth-card">
+      <div class="auth-title">Sign in</div>
+      <div class="auth-subtitle">Use your AutoOps account to access the dashboard.</div>
+      {% if error %}
+      <div class="auth-error">{{ error }}</div>
+      {% endif %}
+      <form method="POST" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label>
+          <span>Username</span>
+          <input class="text-input" name="username" autocomplete="username" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input class="text-input" name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="button" type="submit">Login</button>
+      </form>
+      <div class="auth-footer">
+        <span>Need an account?</span>
+        <a href="{{ url_for('auth.signup') }}">Create one</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
