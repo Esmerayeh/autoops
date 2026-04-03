@@ -6,7 +6,10 @@ const state = {
   processes: [],
   processSort: { key: "cpu_percent", asc: false },
   latestActionId: null,
+  refreshInFlight: false,
 };
+
+const POLL_INTERVAL_MS = 6000;
 
 const refs = {
   healthScore: document.getElementById("health-score"),
@@ -137,7 +140,13 @@ async function api(path, options = {}) {
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     ...options,
   });
-  const payload = await response.json();
+  const text = await response.text();
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`Invalid JSON response for ${path}`);
+  }
   if (!response.ok) throw new Error(payload?.error?.message || `Request failed for ${path}: ${response.status}`);
   return payload;
 }
@@ -223,7 +232,7 @@ function renderIncidentList(incidents, timeline) {
       <span class="timeline-severity severity-${incident.severity}">${incident.severity}</span>
       <strong>#${incident.id} ${incident.title}</strong>
       <div>${incident.summary}</div>
-      <div class="timeline-meta">${incident.status} · root cause: ${incident.root_cause_hypothesis || "pending"}</div>
+      <div class="timeline-meta">${incident.status} | root cause: ${incident.root_cause_hypothesis || "pending"}</div>
     `;
     refs.incidentList.appendChild(el);
   });
@@ -374,7 +383,9 @@ async function loadDecisions() {
 async function loadAutonomyStatus() {
   const payload = await api("/api/v1/autonomy/status");
   const autonomy = payload.data.autonomy;
-  refs.autonomyModeSelect.value = autonomy.mode;
+  if (document.activeElement !== refs.autonomyModeSelect) {
+    refs.autonomyModeSelect.value = autonomy.mode;
+  }
   refs.autonomyActionsCount.textContent = autonomy.recent_autonomous_actions;
   refs.autonomyConfidenceGate.textContent = formatRatio(autonomy.decision_confidence_threshold);
   refs.autonomySafetyGate.textContent = formatRatio(autonomy.decision_safety_threshold);
@@ -404,14 +415,17 @@ async function loadFeedback() {
       <span class="timeline-severity severity-info">${label}</span>
       <strong>${record.metric_name || "system"} / ${record.process_name || "general"}</strong>
       <div>${record.notes || "Feedback sample captured."}</div>
-      <div class="timeline-meta">${record.action_effective ? "validation passed" : "validation failed"} · ${new Date(record.created_at).toLocaleString()}</div>
+      <div class="timeline-meta">${record.action_effective ? "validation passed" : "validation failed"} | ${new Date(record.created_at).toLocaleString()}</div>
     `;
     refs.feedbackList.appendChild(el);
   });
 }
 
 async function loadValidation() {
-  if (!state.latestActionId) return;
+  if (!state.latestActionId) {
+    refs.validationBadge.textContent = "No validation yet";
+    return;
+  }
   try {
     const payload = await api(`/api/v1/actions/${state.latestActionId}/validation`);
     updateValidationChart(payload.data.validation);
@@ -430,8 +444,9 @@ async function saveAutonomyMode() {
 }
 
 async function refresh() {
-  try {
-    await Promise.all([
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
+  const results = await Promise.allSettled([
       loadStats(),
       loadHistory(),
       loadAlerts(),
@@ -443,9 +458,17 @@ async function refresh() {
       loadAutonomyStatus(),
       loadFeedback(),
     ]);
+  results.forEach((result) => {
+    if (result.status === "rejected") {
+      console.error(result.reason);
+    }
+  });
+  try {
     await loadValidation();
   } catch (error) {
     console.error(error);
+  } finally {
+    state.refreshInFlight = false;
   }
 }
 
@@ -480,5 +503,5 @@ window.addEventListener("load", () => {
   refresh();
   setInterval(() => {
     if (state.autoRefresh) refresh();
-  }, 4000);
+  }, POLL_INTERVAL_MS);
 });
