@@ -61,6 +61,7 @@ flowchart LR
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pip install -r requirements-ml.txt
 copy .env.example .env
 python app.py
 ```
@@ -71,6 +72,8 @@ Default dev credentials:
 
 - Username: `admin`
 - Password: `admin123!`
+
+If you skip `requirements-ml.txt`, AutoOps AI will still run and automatically fall back to rule-based analytics.
 
 ## Database and migrations
 
