@@ -1,5 +1,7 @@
 # AutoOps AI - Production-Ready Self-Healing Infrastructure Monitor
 
+Live Demo: https://autoops-ai-92w3.onrender.com/
+
 AutoOps AI is a polished AIOps platform built with Flask, SQLite, psutil, SQLAlchemy, and a premium observability dashboard. It keeps the original local-first simplicity, but upgrades the project into a resume-ready platform that demonstrates backend architecture, SRE thinking, security engineering, analytics design, and careful self-healing automation.
 
 ## Why this project matters
@@ -23,7 +25,7 @@ This project shows how to evolve a simple monitoring dashboard into an explainab
 - Policy-based healing engine for process kill, temp cleanup, manual recommendation, and webhook-ready automation
 - Secure auth with password hashing, login throttling, session protection, account lockout, and login audit records
 - Versioned APIs under `/api/v1/*` with legacy compatibility for `/stats`, `/history`, `/processes`, and `/logs`
-- Responsive dashboard with health score, anomaly badges, alert timeline, healing history, process filtering, and log controls
+- Responsive dashboard with health score, anomaly badges, alert timeline, healing history, process filtering, logs intelligence, and AI command-center workflows
 
 ## Architecture
 
@@ -35,8 +37,12 @@ flowchart LR
   API --> Legacy["Legacy Compatibility Routes"]
   API --> Runtime["Runtime Manager"]
   Runtime --> Monitor["Monitoring Service"]
+  Monitor --> Adaptive["Adaptive Threshold Engine"]
   Monitor --> Analytics["Analytics Engine"]
+  Monitor --> Decision["Decision Engine"]
   Monitor --> Healing["Healing Engine"]
+  Monitor --> Incidents["Incident Service"]
+  Monitor --> Feedback["Feedback Learning"]
   Monitor --> Cache["In-Memory Live Cache"]
   Monitor --> DB["SQLite via SQLAlchemy"]
   DB --> Metrics["metrics_snapshots"]
@@ -45,6 +51,8 @@ flowchart LR
   DB --> Audit["login_audit"]
   DB --> Users["users"]
   DB --> Reco["system_recommendations"]
+  DB --> IncidentDB["incidents"]
+  DB --> FeedbackDB["feedback_records"]
 ```
 
 ## Local setup
@@ -101,6 +109,6 @@ docker compose up --build
 ## Resume-ready bullets
 
 - Designed and implemented a modular Flask-based AIOps platform with versioned APIs, SQLAlchemy persistence, secure auth, and policy-driven remediation
-- Built explainable anomaly detection and forecasting workflows with rule-based fallbacks and optional Isolation Forest analytics
-- Shipped a premium observability dashboard with correlated alerts, self-healing audit trails, structured logs, and health scoring
+- Built explainable anomaly detection, adaptive thresholds, forecasting, incident grouping, and feedback-driven decision workflows
+- Shipped a premium observability dashboard with correlated alerts, AI command center panels, self-healing audit trails, and validation views
 - Added deployment-ready Docker, Gunicorn, testing, linting, and migration support while preserving backward-compatible APIs
