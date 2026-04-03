@@ -572,7 +572,6 @@ class MonitoringService:
             improved = (after.get("cpu", 0) + after.get("memory", 0)) < (before.get("cpu", 0) + before.get("memory", 0))
             self.feedback.record_feedback(
                 incident_id=item["action"].get("incident_id"),
-                healing_action_id=None,
                 metric_name=metric_name,
                 process_name=(item["action"].get("target") or "").split(":")[0] or None,
                 anomaly_was_real=True,
