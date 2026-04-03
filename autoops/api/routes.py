@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_login import login_required
 
-from autoops.api.schemas import ApiEnvelope, AutonomyStatusPayload, HealthPayload
+from autoops.api.schemas import validate_api_envelope, validate_autonomy_status, validate_health_payload
 from autoops.extensions import csrf, limiter
 from autoops.services.runtime import runtime_manager
 from autoops.utils.responses import success_response
@@ -32,8 +32,8 @@ def alert_level(value: float) -> str:
 @login_required
 def health():
     payload = monitoring_service().health_payload()
-    HealthPayload.model_validate(payload)
-    return jsonify(ApiEnvelope.model_validate(success_response(payload)).model_dump())
+    validate_health_payload(payload)
+    return jsonify(validate_api_envelope(success_response(payload)))
 
 
 @api_bp.route("/host")
@@ -47,7 +47,7 @@ def host():
 @limiter.limit(lambda: current_app.config["API_RATE_LIMIT"])
 def stats_v1():
     payload = success_response(monitoring_service().get_live_summary())
-    return jsonify(ApiEnvelope.model_validate(payload).model_dump())
+    return jsonify(validate_api_envelope(payload))
 
 
 @api_bp.route("/history")
@@ -102,7 +102,7 @@ def feedback_v1():
 @login_required
 def autonomy_status_v1():
     data = monitoring_service().get_autonomy_status()
-    AutonomyStatusPayload.model_validate(data)
+    validate_autonomy_status(data)
     return jsonify(success_response({"autonomy": data}))
 
 
