@@ -10,3 +10,48 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./tmp:/app/tmp
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: autoops
+      POSTGRES_PASSWORD: autoops
+      POSTGRES_DB: autoops
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  control-plane:
+    build:
+      context: .
+      dockerfile: deploy/control-plane.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/worker.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+
+  agent:
+    build:
+      context: .
+      dockerfile: deploy/agent.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - control-plane

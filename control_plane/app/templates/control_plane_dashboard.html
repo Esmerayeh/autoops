@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/control-static/control_plane.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">AutoOps AI</div>
+        <div class="subtitle">Distributed Control Plane</div>
+        <div class="status-chip">MVP</div>
+      </aside>
+      <main class="content">
+        <section class="hero">
+          <div>
+            <h1>Fleet Command Center</h1>
+            <p>Multi-node monitoring, incidents, policies, and remediation from one control plane.</p>
+          </div>
+          <div class="actions">
+            <button id="refresh-btn" class="btn">Refresh</button>
+          </div>
+        </section>
+
+        <section id="global-error" class="alert hidden"></section>
+        <section class="card login-card">
+          <h2>Operator Login</h2>
+          <form id="login-form" class="login-form">
+            <label>
+              <span>Email</span>
+              <input id="email-input" type="email" value="admin@local.autoops" autocomplete="username" />
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="password-input" type="password" value="admin123!" autocomplete="current-password" />
+            </label>
+            <button class="btn" type="submit">Get Access Token</button>
+            <span id="login-status" class="list-subtle">Use the demo bootstrap credentials or your own tenant admin login.</span>
+          </form>
+        </section>
+
+        <section class="grid stats-grid">
+          <article class="card stat-card">
+            <span class="label">Nodes</span>
+            <strong id="node-count">-</strong>
+          </article>
+          <article class="card stat-card">
+            <span class="label">Agents</span>
+            <strong id="agent-count">-</strong>
+          </article>
+          <article class="card stat-card">
+            <span class="label">Open Incidents</span>
+            <strong id="incident-count">-</strong>
+          </article>
+          <article class="card stat-card">
+            <span class="label">Queued Actions</span>
+            <strong id="action-count">-</strong>
+          </article>
+        </section>
+
+        <section class="grid panels-grid">
+          <article class="card">
+            <h2>Fleet Overview</h2>
+            <div id="fleet-table" class="table-wrap empty-state">No fleet data loaded yet.</div>
+          </article>
+          <article class="card">
+            <h2>Incidents</h2>
+            <div id="incident-list" class="list-wrap empty-state">No incidents loaded yet.</div>
+          </article>
+          <article class="card">
+            <h2>Policies</h2>
+            <div id="policy-list" class="list-wrap empty-state">No policies loaded yet.</div>
+          </article>
+          <article class="card">
+            <h2>Recent Actions</h2>
+            <div id="action-list" class="list-wrap empty-state">No remediation history loaded yet.</div>
+          </article>
+          <article class="card full-span">
+            <h2>Audit Trail</h2>
+            <div id="audit-list" class="list-wrap empty-state">No audit events loaded yet.</div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="/control-static/control_plane.js" defer></script>
+  </body>
+</html>
