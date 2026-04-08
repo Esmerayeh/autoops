@@ -24,12 +24,13 @@ html, body {
     linear-gradient(180deg, #08111d 0%, #050b14 100%);
   color: var(--text);
   font-family: "Space Grotesk", sans-serif;
+  overflow-x: hidden;
 }
 
-body { min-height: 100vh; }
+body { min-height: 100vh; width: 100%; }
 a { color: inherit; }
 
-.app-shell { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh; }
+.app-shell { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh; width: 100%; overflow-x: clip; }
 .sidebar {
   padding: 28px 24px; border-right: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(5, 11, 20, 0.72); backdrop-filter: blur(22px);
@@ -49,7 +50,7 @@ a { color: inherit; }
 .sidebar-footer { margin-top: auto; display: grid; gap: 8px; }
 .meta-value { font-family: "IBM Plex Mono", monospace; }
 
-.content { padding: 28px; display: grid; gap: 22px; }
+.content { padding: 28px; display: grid; gap: 22px; min-width: 0; overflow-x: hidden; }
 .topbar, .status-strip, .hero-grid, .metrics-grid, .chart-grid, .dual-grid, .command-center-grid { display: grid; gap: 18px; }
 .topbar { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .topbar h1, .card-header h2, .auth-title { margin: 0; }
@@ -60,7 +61,7 @@ a { color: inherit; }
   border: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.04);
   border-radius: 999px; padding: 10px 14px;
 }
-.status-chip { display: flex; flex-direction: column; min-width: 150px; gap: 4px; }
+.status-chip { display: flex; flex-direction: column; min-width: 150px; gap: 4px; max-width: 100%; }
 .status-chip strong { font-size: 0.95rem; }
 .status-wide { flex: 1; }
 
@@ -69,7 +70,7 @@ a { color: inherit; }
 
 .glass-card {
   background: var(--panel); border: 1px solid var(--panel-border); border-radius: 24px;
-  padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(20px);
+  padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(20px); min-width: 0;
 }
 .health-card { min-height: 220px; }
 .host-grid, .mini-stats { justify-content: space-between; }
@@ -80,18 +81,19 @@ a { color: inherit; }
 .progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #60a5fa); transition: width 0.35s ease; }
 .progress-fill.neutral { background: linear-gradient(90deg, #60a5fa, #818cf8); }
 
-.chart-card canvas { width: 100%; min-height: 280px; }
+.chart-card { overflow: hidden; }
+.chart-card canvas { width: 100%; min-height: 280px; max-width: 100%; }
 .table-card, .timeline-card { min-height: 420px; }
 .command-card { min-height: 250px; }
-.table-shell { overflow: auto; margin-top: 14px; }
-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.table-shell { overflow: auto; margin-top: 14px; max-width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; table-layout: fixed; }
 th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
 thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
 
 .timeline-list { display: grid; gap: 12px; margin-top: 14px; }
 .timeline-item {
   border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.03);
-  border-radius: 18px; padding: 14px; display: grid; gap: 8px;
+  border-radius: 18px; padding: 14px; display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere;
 }
 .timeline-severity {
   display: inline-flex; width: fit-content; padding: 4px 10px; border-radius: 999px;
@@ -116,6 +118,8 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .reasoning-copy { color: var(--muted); line-height: 1.6; }
 .reasoning-stack { display: grid; gap: 10px; margin-top: 14px; }
@@ -134,6 +138,7 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
   color: #04111d; font-weight: 700; cursor: pointer;
 }
 .button-secondary { cursor: pointer; }
+.metric-value, .timeline-meta, td, th, .status-chip strong { overflow-wrap: anywhere; }
 
 .auth-page { min-height: 100vh; display: grid; grid-template-columns: 1.15fr 0.85fr; }
 .auth-panel { padding: 48px; }

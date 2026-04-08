@@ -67,12 +67,32 @@ const refs = {
   feedbackList: document.getElementById("feedback-list"),
 };
 
+function numberOr(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function setEmptyState(element, message) {
+  if (!element) return;
+  element.classList.add("empty-state");
+  element.textContent = message;
+}
+
+function clearEmptyState(element) {
+  if (!element) return;
+  element.classList.remove("empty-state");
+}
+
 function formatPercent(value) {
-  return `${Number(value || 0).toFixed(1)}%`;
+  return `${numberOr(value).toFixed(1)}%`;
 }
 
 function formatRatio(value) {
-  return `${Math.round(Number(value || 0) * 100)}%`;
+  return `${Math.round(numberOr(value) * 100)}%`;
 }
 
 function setMetric(metric, value, trend, extraLabel) {
@@ -82,8 +102,8 @@ function setMetric(metric, value, trend, extraLabel) {
   const badgeNode = document.getElementById(`${metric}-anomaly`);
   if (valueNode) valueNode.textContent = extraLabel || formatPercent(value);
   if (trendNode) trendNode.textContent = `Trend: ${trend || "--"}`;
-  if (barNode) barNode.style.width = `${Math.max(0, Math.min(100, Number(value || 0)))}%`;
-  if (badgeNode) badgeNode.textContent = Number(value || 0) >= 85 ? "Critical" : Number(value || 0) >= 70 ? "Warning" : "Normal";
+  if (barNode) barNode.style.width = `${Math.max(0, Math.min(100, numberOr(value)))}%`;
+  if (badgeNode) badgeNode.textContent = numberOr(value) >= 85 ? "Critical" : numberOr(value) >= 70 ? "Warning" : "Normal";
 }
 
 function createCharts() {
@@ -102,6 +122,8 @@ function createCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
+        resizeDelay: 150,
         plugins: { legend: { labels: { color: "#cfe0f6" } } },
         scales: {
           x: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" } },
@@ -125,6 +147,8 @@ function createCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
+        resizeDelay: 150,
         plugins: { legend: { labels: { color: "#cfe0f6" } } },
         scales: {
           x: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" } },
@@ -167,11 +191,10 @@ function renderPills(container, items, className) {
 
 function renderTimeline(container, items, mode) {
   if (!items || items.length === 0) {
-    container.classList.add("empty-state");
-    container.textContent = mode === "alerts" ? "No active alerts yet." : "No healing actions recorded yet.";
+    setEmptyState(container, mode === "alerts" ? "No active alerts yet." : "No healing actions recorded yet.");
     return;
   }
-  container.classList.remove("empty-state");
+  clearEmptyState(container);
   container.innerHTML = "";
   items.forEach((item) => {
     const severity = item.severity || item.status || "info";
@@ -181,7 +204,7 @@ function renderTimeline(container, items, mode) {
       <span class="timeline-severity severity-${severity}">${severity}</span>
       <strong>${item.title || item.policy_name || item.summary}</strong>
       <div>${item.message || item.summary || ""}</div>
-      <div class="timeline-meta">${item.recommendation || item.target || ""}</div>
+      <div class="timeline-meta">${item.recommendation || item.target || item.validation_status || ""}</div>
     `;
     container.appendChild(el);
   });
@@ -209,9 +232,9 @@ function renderProcesses() {
     tr.innerHTML = `
       <td>${item.pid}</td>
       <td>${item.name || "-"}</td>
-      <td>${Number(item.cpu_percent || 0).toFixed(1)}</td>
-      <td>${Number(item.memory_percent || 0).toFixed(2)}</td>
-      <td>${item.status || "-"} / ${Number(item.anomaly_score || 0).toFixed(0)}</td>
+      <td>${numberOr(item.cpu_percent).toFixed(1)}</td>
+      <td>${numberOr(item.memory_percent).toFixed(2)}</td>
+      <td>${item.status || "-"} / ${numberOr(item.anomaly_score).toFixed(0)}</td>
     `;
     refs.processesBody.appendChild(tr);
   });
@@ -219,11 +242,10 @@ function renderProcesses() {
 
 function renderIncidentList(incidents, timeline) {
   if (!incidents.length && !timeline.length) {
-    refs.incidentList.classList.add("empty-state");
-    refs.incidentList.textContent = "No active incidents.";
+    setEmptyState(refs.incidentList, "No active incidents.");
     return;
   }
-  refs.incidentList.classList.remove("empty-state");
+  clearEmptyState(refs.incidentList);
   refs.incidentList.innerHTML = "";
   incidents.forEach((incident) => {
     const el = document.createElement("article");
@@ -251,12 +273,11 @@ function renderIncidentList(incidents, timeline) {
 
 function renderReasoning(decisions, feedbackSummary) {
   if (!decisions.length) {
-    refs.reasoningPanel.classList.add("empty-state");
-    refs.reasoningPanel.textContent = "Waiting for the next decision cycle.";
+    setEmptyState(refs.reasoningPanel, "Waiting for the next decision cycle.");
     return;
   }
   const latest = decisions[decisions.length - 1];
-  refs.reasoningPanel.classList.remove("empty-state");
+  clearEmptyState(refs.reasoningPanel);
   refs.reasoningPanel.innerHTML = `
     <div class="reasoning-item"><strong>Anomaly detected</strong>${latest.risk_level} risk with decision "${latest.decision}".</div>
     <div class="reasoning-item"><strong>Decision made</strong>${latest.why}</div>
@@ -266,44 +287,52 @@ function renderReasoning(decisions, feedbackSummary) {
 
 function updateValidationChart(validation) {
   if (!validation || !state.validationChart) return;
-  refs.validationBadge.textContent = `validation ${validation.validation_status}`;
-  state.validationChart.data.datasets[0].data = [validation.before.cpu || 0, validation.after.cpu || 0];
-  state.validationChart.data.datasets[1].data = [validation.before.memory || 0, validation.after.memory || 0];
+  refs.validationBadge.textContent = `validation ${validation.validation_status || "pending"}`;
+  const before = validation.before || {};
+  const after = validation.after || {};
+  state.validationChart.data.datasets[0].data = [numberOr(before.cpu), numberOr(after.cpu)];
+  state.validationChart.data.datasets[1].data = [numberOr(before.memory), numberOr(after.memory)];
   state.validationChart.update();
 }
 
 async function loadStats() {
   const payload = await api("/api/v1/stats");
-  const summary = payload.data;
-  const snapshot = summary.snapshot;
-  const analysis = summary.analysis;
-  const metrics = snapshot.metrics;
-  const host = snapshot.host;
-
-  refs.healthScore.textContent = summary.health_score;
-  refs.healthSummary.textContent = analysis.recommendation.summary;
-  refs.anomalyScore.textContent = analysis.anomaly.score;
-  refs.anomalyConfidence.textContent = formatRatio(analysis.anomaly.confidence || 0);
-  refs.riskScore.textContent = `${analysis.risk.score} (${analysis.risk.label})`;
-  refs.latencyP95.textContent = `${metrics.api_latency_ms_p95.toFixed(1)} ms`;
-  refs.mlModeBadge.textContent = `Mode: ${analysis.mode.toUpperCase()}`;
-  refs.hostName.textContent = host.hostname;
-  refs.hostPlatform.textContent = host.platform;
-  refs.hostCpuCount.textContent = `${host.physical_cpu_count || host.cpu_count}/${host.cpu_count}`;
-  refs.hostBootTime.textContent = new Date(host.boot_time).toLocaleString();
-  refs.hostPid.textContent = host.python_pid;
-  refs.hostMlMode.textContent = host.ml_mode;
-  refs.statusEnvironment.textContent = summary.status_bar.environment;
-  refs.statusSampler.textContent = summary.status_bar.sampler_state;
-  refs.statusHealing.textContent = `${summary.status_bar.self_healing_mode} / ${summary.status_bar.autonomy_mode}`;
-  refs.statusLastAction.textContent = summary.status_bar.last_action;
-  refs.recommendationTitle.textContent = analysis.recommendation.summary;
-  refs.recommendationReasoning.textContent = analysis.recommendation.reasoning;
-  refs.forecastChip.textContent = `CPU forecast ${analysis.forecast.cpu.next_5m_estimate}%`;
-  renderPills(refs.causeList, analysis.recommendation.probable_causes, "cause-pill");
-  renderPills(refs.recommendationActions, analysis.recommendation.next_actions, "action-pill");
-
+  const summary = payload.data || {};
+  const snapshot = summary.snapshot || {};
+  const analysis = summary.analysis || {};
+  const metrics = snapshot.metrics || {};
+  const host = snapshot.host || {};
+  const recommendation = analysis.recommendation || {};
+  const anomaly = analysis.anomaly || {};
+  const risk = analysis.risk || {};
+  const forecast = analysis.forecast || {};
   const decision = analysis.decision || {};
+  const trend = analysis.trend || {};
+  const statusBar = summary.status_bar || {};
+
+  refs.healthScore.textContent = numberOr(summary.health_score).toFixed(1);
+  refs.healthSummary.textContent = recommendation.summary || "Telemetry is online. Waiting for enough signal to produce a stronger diagnosis.";
+  refs.anomalyScore.textContent = numberOr(anomaly.score).toFixed(3);
+  refs.anomalyConfidence.textContent = formatRatio(anomaly.confidence);
+  refs.riskScore.textContent = `${numberOr(risk.score).toFixed(1)} (${risk.label || "low"})`;
+  refs.latencyP95.textContent = `${numberOr(metrics.api_latency_ms_p95).toFixed(1)} ms`;
+  refs.mlModeBadge.textContent = `Mode: ${(analysis.mode || "rules").toUpperCase()}`;
+  refs.hostName.textContent = host.hostname || "localhost";
+  refs.hostPlatform.textContent = host.platform || "--";
+  refs.hostCpuCount.textContent = `${host.physical_cpu_count || host.cpu_count || "--"}/${host.cpu_count || "--"}`;
+  refs.hostBootTime.textContent = host.boot_time ? new Date(host.boot_time).toLocaleString() : "--";
+  refs.hostPid.textContent = host.python_pid || "--";
+  refs.hostMlMode.textContent = host.ml_mode || analysis.mode || "--";
+  refs.statusEnvironment.textContent = statusBar.environment || "--";
+  refs.statusSampler.textContent = statusBar.sampler_state || "--";
+  refs.statusHealing.textContent = `${statusBar.self_healing_mode || "--"} / ${statusBar.autonomy_mode || "--"}`;
+  refs.statusLastAction.textContent = statusBar.last_action || "No healing actions yet";
+  refs.recommendationTitle.textContent = recommendation.summary || "Awaiting analysis";
+  refs.recommendationReasoning.textContent = recommendation.reasoning || "The analytics engine is collecting more context before making a recommendation.";
+  refs.forecastChip.textContent = `CPU forecast ${numberOr(forecast.cpu?.next_5m_estimate).toFixed(1)}%`;
+  renderPills(refs.causeList, safeArray(recommendation.probable_causes), "cause-pill");
+  renderPills(refs.recommendationActions, safeArray(recommendation.next_actions), "action-pill");
+
   refs.decisionBadge.textContent = decision.decision || "decision pending";
   refs.decisionResult.textContent = decision.decision || "--";
   refs.decisionConfidence.textContent = decision.confidence != null ? formatRatio(decision.confidence) : "--";
@@ -311,21 +340,22 @@ async function loadStats() {
   refs.decisionAction.textContent = decision.recommended_action_type || "none";
   refs.decisionWhy.textContent = decision.why || "No decision reasoning yet.";
 
-  setMetric("cpu", metrics.cpu, analysis.trend.cpu);
-  setMetric("memory", metrics.memory, analysis.trend.memory);
-  setMetric("disk", metrics.disk, analysis.trend.disk);
-  setMetric("network", metrics.network.bytes_recv_per_sec / 1024, "live", `${(metrics.network.bytes_recv_per_sec / 1024).toFixed(1)} KB/s`);
+  setMetric("cpu", metrics.cpu, trend.cpu);
+  setMetric("memory", metrics.memory, trend.memory);
+  setMetric("disk", metrics.disk, trend.disk);
+  const netRecvKb = numberOr(metrics.network?.bytes_recv_per_sec) / 1024;
+  setMetric("network", netRecvKb, "live", `${netRecvKb.toFixed(1)} KB/s`);
 }
 
 async function loadHistory() {
   const payload = await api(`/api/v1/history?limit=${state.timeRange}`);
-  const history = payload.data.history || [];
+  const history = safeArray(payload.data?.history);
   if (!state.chart) return;
   state.chart.data.labels = history.map((item) => new Date(item.timestamp).toLocaleTimeString());
-  state.chart.data.datasets[0].data = history.map((item) => item.metrics.cpu);
-  state.chart.data.datasets[1].data = history.map((item) => item.metrics.memory);
-  state.chart.data.datasets[2].data = history.map((item) => item.metrics.disk);
-  state.chart.data.datasets[3].data = history.map((item) => Number(item.metrics.network?.bytes_recv_per_sec || 0) / 1024);
+  state.chart.data.datasets[0].data = history.map((item) => numberOr(item.metrics?.cpu));
+  state.chart.data.datasets[1].data = history.map((item) => numberOr(item.metrics?.memory));
+  state.chart.data.datasets[2].data = history.map((item) => numberOr(item.metrics?.disk));
+  state.chart.data.datasets[3].data = history.map((item) => numberOr(item.metrics?.network?.bytes_recv_per_sec) / 1024);
   state.chart.update();
 }
 
@@ -336,21 +366,21 @@ async function loadAlerts() {
 
 async function loadActions() {
   const payload = await api("/api/v1/actions?limit=8");
-  const actions = payload.data.actions || [];
+  const actions = safeArray(payload.data?.actions);
   renderTimeline(refs.actionsTimeline, actions, "actions");
   state.latestActionId = actions[0]?.id || null;
 }
 
 async function loadProcesses() {
   const payload = await api("/api/v1/processes?limit=15");
-  state.processes = payload.data.processes || [];
+  state.processes = safeArray(payload.data?.processes);
   renderProcesses();
 }
 
 async function loadLogs() {
   const level = refs.logLevelFilter?.value || "";
   const payload = await api(`/api/v1/logs?limit=80${level ? `&level=${encodeURIComponent(level)}` : ""}`);
-  const entries = payload.data.entries || [];
+  const entries = safeArray(payload.data?.entries);
   refs.logsBody.innerHTML = "";
   if (!entries.length) {
     refs.logsBody.innerHTML = '<tr><td colspan="3">No logs available.</td></tr>';
@@ -369,44 +399,43 @@ async function loadLogs() {
 
 async function loadIncidents() {
   const payload = await api("/api/v1/incidents?limit=6");
-  renderIncidentList(payload.data.incidents || [], payload.data.timeline || []);
+  renderIncidentList(safeArray(payload.data?.incidents), safeArray(payload.data?.timeline));
 }
 
 async function loadDecisions() {
   const decisionsPayload = await api("/api/v1/decisions?limit=8");
   const feedbackPayload = await api("/api/v1/feedback?limit=6");
-  const decisions = decisionsPayload.data.decisions || [];
-  const feedbackSummary = feedbackPayload.data.summary || {};
+  const decisions = safeArray(decisionsPayload.data?.decisions);
+  const feedbackSummary = feedbackPayload.data?.summary || {};
   renderReasoning(decisions, feedbackSummary);
 }
 
 async function loadAutonomyStatus() {
   const payload = await api("/api/v1/autonomy/status");
-  const autonomy = payload.data.autonomy;
+  const autonomy = payload.data?.autonomy || {};
   if (document.activeElement !== refs.autonomyModeSelect) {
-    refs.autonomyModeSelect.value = autonomy.mode;
+    refs.autonomyModeSelect.value = autonomy.mode || "assisted";
   }
-  refs.autonomyActionsCount.textContent = autonomy.recent_autonomous_actions;
+  refs.autonomyActionsCount.textContent = numberOr(autonomy.recent_autonomous_actions).toFixed(0);
   refs.autonomyConfidenceGate.textContent = formatRatio(autonomy.decision_confidence_threshold);
   refs.autonomySafetyGate.textContent = formatRatio(autonomy.decision_safety_threshold);
-  refs.autonomyFeedbackRate.textContent = formatRatio(autonomy.feedback_summary.action_success_rate);
+  refs.autonomyFeedbackRate.textContent = formatRatio(autonomy.feedback_summary?.action_success_rate);
 }
 
 async function loadFeedback() {
   const payload = await api("/api/v1/feedback?limit=5");
-  const summary = payload.data.summary;
-  const records = payload.data.records || [];
+  const summary = payload.data?.summary || {};
+  const records = safeArray(payload.data?.records);
   refs.feedbackSuccessRate.textContent = formatRatio(summary.action_success_rate);
   refs.feedbackFalseRate.textContent = formatRatio(summary.false_positive_rate);
   refs.feedbackRecurrenceRate.textContent = formatRatio(summary.recurrence_rate);
-  refs.feedbackRecordCount.textContent = summary.total_records;
+  refs.feedbackRecordCount.textContent = numberOr(summary.total_records).toFixed(0);
   refs.feedbackList.innerHTML = "";
   if (!records.length) {
-    refs.feedbackList.classList.add("empty-state");
-    refs.feedbackList.textContent = "No feedback records yet.";
+    setEmptyState(refs.feedbackList, "No feedback records yet.");
     return;
   }
-  refs.feedbackList.classList.remove("empty-state");
+  clearEmptyState(refs.feedbackList);
   records.forEach((record) => {
     const label = record.action_effective ? "confidence increased" : "confidence decreased";
     const el = document.createElement("article");
@@ -424,6 +453,11 @@ async function loadFeedback() {
 async function loadValidation() {
   if (!state.latestActionId) {
     refs.validationBadge.textContent = "No validation yet";
+    if (state.validationChart) {
+      state.validationChart.data.datasets[0].data = [0, 0];
+      state.validationChart.data.datasets[1].data = [0, 0];
+      state.validationChart.update();
+    }
     return;
   }
   try {
