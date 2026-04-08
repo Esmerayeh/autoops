@@ -103,10 +103,16 @@ python app.py
 
 Open `http://127.0.0.1:5000`.
 
-Default dev credentials:
+Dev-only seeded credentials are available only when `AUTOOPS_SEED_DEFAULT_ADMIN=true` in development/testing.
 
 - Username: `admin`
 - Password: `admin123!`
+
+Production should set:
+
+- `AUTOOPS_SECRET_KEY`
+- `AUTOOPS_DEFAULT_ADMIN_PASSWORD` only if you explicitly want to seed an admin
+- `AUTOOPS_SEED_DEFAULT_ADMIN=false`
 
 If you skip `requirements-ml.txt`, AutoOps AI will still run and automatically fall back to rule-based analytics.
 

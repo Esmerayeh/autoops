@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from autoops.extensions import db, limiter
 from autoops.models import LoginAudit, User
+from autoops.utils.security import is_safe_next_url
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -82,7 +83,8 @@ def login():
             db.session.commit()
             login_user(user)
             audit_login(username, "login", True)
-            next_url = request.args.get("next") or url_for("ui.dashboard")
+            requested_next = request.args.get("next")
+            next_url = requested_next if is_safe_next_url(requested_next) else url_for("ui.dashboard")
             return redirect(next_url)
 
     return render_template("login.html", error=error)

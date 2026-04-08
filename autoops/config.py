@@ -78,8 +78,9 @@ class BaseConfig:
     MAX_FAILED_LOGINS = max(3, int(os.getenv("AUTOOPS_MAX_FAILED_LOGINS", "5")))
 
     DEFAULT_ADMIN_USERNAME = os.getenv("AUTOOPS_DEFAULT_ADMIN_USERNAME", "admin")
-    DEFAULT_ADMIN_PASSWORD = os.getenv("AUTOOPS_DEFAULT_ADMIN_PASSWORD", "admin123!")
+    DEFAULT_ADMIN_PASSWORD = os.getenv("AUTOOPS_DEFAULT_ADMIN_PASSWORD", "")
     DEFAULT_ADMIN_ROLE = "admin"
+    SEED_DEFAULT_ADMIN = _bool("AUTOOPS_SEED_DEFAULT_ADMIN", False)
     ENABLE_SIGNUP = _bool("AUTOOPS_ENABLE_SIGNUP", True)
     START_BACKGROUND_SAMPLER = True
 
@@ -120,6 +121,8 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     ENV_NAME = "development"
+    DEFAULT_ADMIN_PASSWORD = os.getenv("AUTOOPS_DEFAULT_ADMIN_PASSWORD", "admin123!")
+    SEED_DEFAULT_ADMIN = _bool("AUTOOPS_SEED_DEFAULT_ADMIN", True)
 
 
 class ProductionConfig(BaseConfig):
@@ -127,6 +130,8 @@ class ProductionConfig(BaseConfig):
     ENV_NAME = "production"
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
+    ENABLE_SIGNUP = _bool("AUTOOPS_ENABLE_SIGNUP", False)
+    SEED_DEFAULT_ADMIN = _bool("AUTOOPS_SEED_DEFAULT_ADMIN", False)
 
 
 class TestingConfig(BaseConfig):
@@ -141,6 +146,8 @@ class TestingConfig(BaseConfig):
     API_RATE_LIMIT = "1000 per minute"
     MAX_HISTORY_POINTS = 60
     START_BACKGROUND_SAMPLER = False
+    DEFAULT_ADMIN_PASSWORD = "admin123!"
+    SEED_DEFAULT_ADMIN = True
 
 
 config_by_name = {

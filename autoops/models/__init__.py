@@ -2,6 +2,7 @@
 
 from autoops.models.core import (
     AlertEvent,
+    AppSetting,
     ClusterNode,
     FeedbackRecord,
     HealingAction,
@@ -17,6 +18,7 @@ from autoops.models.core import (
 
 __all__ = [
     "AlertEvent",
+    "AppSetting",
     "ClusterNode",
     "FeedbackRecord",
     "HealingAction",

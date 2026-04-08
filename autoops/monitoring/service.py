@@ -47,6 +47,7 @@ class MonitoringService:
         self.incidents = IncidentService()
         self.decision_engine = DecisionEngine(app)
         self.control_plane = None
+        self.settings = None
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._last_network = psutil.net_io_counters()
@@ -360,7 +361,7 @@ class MonitoringService:
                     "sampler_state": "running" if self._thread and self._thread.is_alive() else "stopped",
                     "self_healing_mode": "active" if self.app.config["ENABLE_SELF_HEALING"] and not self.app.config["HEALING_DRY_RUN"] else "dry-run",
                     "last_action": self.last_action_summary,
-                    "autonomy_mode": self.app.config["AUTONOMY_MODE"],
+                    "autonomy_mode": self.settings.get_autonomy_mode() if self.settings else self.app.config["AUTONOMY_MODE"],
                 },
             }
 
@@ -445,7 +446,7 @@ class MonitoringService:
     def get_autonomy_status(self) -> dict[str, Any]:
         live = self.get_live_summary()
         return {
-            "mode": self.app.config["AUTONOMY_MODE"],
+            "mode": self.settings.get_autonomy_mode() if self.settings else self.app.config["AUTONOMY_MODE"],
             "max_actions_per_hour": self.app.config["MAX_AUTONOMOUS_ACTIONS_PER_HOUR"],
             "recent_autonomous_actions": self._recent_autonomous_action_count(),
             "decision_confidence_threshold": self.app.config["DECISION_CONFIDENCE_THRESHOLD"],

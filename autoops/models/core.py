@@ -40,6 +40,16 @@ class User(UserMixin, db.Model):
         }
 
 
+class AppSetting(db.Model):
+    __tablename__ = "app_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    value = db.Column(JSON, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
 class MetricSnapshot(db.Model):
     __tablename__ = "metrics_snapshots"
 

@@ -10,6 +10,7 @@ const state = {
 };
 
 const POLL_INTERVAL_MS = 6000;
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
 const refs = {
   healthScore: document.getElementById("health-score"),
@@ -65,6 +66,7 @@ const refs = {
   feedbackRecurrenceRate: document.getElementById("feedback-recurrence-rate"),
   feedbackRecordCount: document.getElementById("feedback-record-count"),
   feedbackList: document.getElementById("feedback-list"),
+  dashboardError: document.getElementById("dashboard-error"),
 };
 
 function numberOr(value, fallback = 0) {
@@ -85,6 +87,25 @@ function setEmptyState(element, message) {
 function clearEmptyState(element) {
   if (!element) return;
   element.classList.remove("empty-state");
+}
+
+function showGlobalError(message) {
+  if (!refs.dashboardError) return;
+  refs.dashboardError.textContent = message;
+  refs.dashboardError.classList.remove("hidden");
+}
+
+function clearGlobalError() {
+  if (!refs.dashboardError) return;
+  refs.dashboardError.textContent = "";
+  refs.dashboardError.classList.add("hidden");
+}
+
+function createNode(tag, text, className) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
 }
 
 function formatPercent(value) {
@@ -160,8 +181,19 @@ function createCharts() {
 }
 
 async function api(path, options = {}) {
+  const headers = {
+    Accept: "application/json",
+    ...options.headers,
+  };
+  if (options.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (csrfToken && !headers["X-CSRFToken"]) {
+    headers["X-CSRFToken"] = csrfToken;
+  }
   const response = await fetch(path, {
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    credentials: "same-origin",
+    headers,
     ...options,
   });
   const text = await response.text();
@@ -169,23 +201,26 @@ async function api(path, options = {}) {
   try {
     payload = text ? JSON.parse(text) : {};
   } catch {
-    throw new Error(`Invalid JSON response for ${path}`);
+    const error = new Error(`Invalid JSON response for ${path}`);
+    error.status = response.status;
+    throw error;
   }
-  if (!response.ok) throw new Error(payload?.error?.message || `Request failed for ${path}: ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || `Request failed for ${path}: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
 function renderPills(container, items, className) {
-  container.innerHTML = "";
+  container.replaceChildren();
   if (!items || items.length === 0) {
-    container.innerHTML = `<span class="${className}">No items</span>`;
+    container.appendChild(createNode("span", "No items", className));
     return;
   }
   items.forEach((item) => {
-    const span = document.createElement("span");
-    span.className = className;
-    span.textContent = item;
-    container.appendChild(span);
+    container.appendChild(createNode("span", item, className));
   });
 }
 
@@ -195,17 +230,14 @@ function renderTimeline(container, items, mode) {
     return;
   }
   clearEmptyState(container);
-  container.innerHTML = "";
+  container.replaceChildren();
   items.forEach((item) => {
     const severity = item.severity || item.status || "info";
-    const el = document.createElement("article");
-    el.className = "timeline-item";
-    el.innerHTML = `
-      <span class="timeline-severity severity-${severity}">${severity}</span>
-      <strong>${item.title || item.policy_name || item.summary}</strong>
-      <div>${item.message || item.summary || ""}</div>
-      <div class="timeline-meta">${item.recommendation || item.target || item.validation_status || ""}</div>
-    `;
+    const el = createNode("article", null, "timeline-item");
+    el.appendChild(createNode("span", severity, `timeline-severity severity-${severity}`));
+    el.appendChild(createNode("strong", item.title || item.policy_name || item.summary || "--"));
+    el.appendChild(createNode("div", item.message || item.summary || ""));
+    el.appendChild(createNode("div", item.recommendation || item.target || item.validation_status || "", "timeline-meta"));
     container.appendChild(el);
   });
 }
@@ -222,20 +254,22 @@ function renderProcesses() {
       return state.processSort.asc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
     });
 
-  refs.processesBody.innerHTML = "";
+  refs.processesBody.replaceChildren();
   if (!items.length) {
-    refs.processesBody.innerHTML = '<tr><td colspan="5">No matching processes.</td></tr>';
+    const tr = document.createElement("tr");
+    const td = createNode("td", "No matching processes.");
+    td.colSpan = 5;
+    tr.appendChild(td);
+    refs.processesBody.appendChild(tr);
     return;
   }
   items.forEach((item) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${item.pid}</td>
-      <td>${item.name || "-"}</td>
-      <td>${numberOr(item.cpu_percent).toFixed(1)}</td>
-      <td>${numberOr(item.memory_percent).toFixed(2)}</td>
-      <td>${item.status || "-"} / ${numberOr(item.anomaly_score).toFixed(0)}</td>
-    `;
+    tr.appendChild(createNode("td", String(item.pid ?? "-")));
+    tr.appendChild(createNode("td", item.name || "-"));
+    tr.appendChild(createNode("td", numberOr(item.cpu_percent).toFixed(1)));
+    tr.appendChild(createNode("td", numberOr(item.memory_percent).toFixed(2)));
+    tr.appendChild(createNode("td", `${item.status || "-"} / ${numberOr(item.anomaly_score).toFixed(0)}`));
     refs.processesBody.appendChild(tr);
   });
 }
@@ -246,27 +280,21 @@ function renderIncidentList(incidents, timeline) {
     return;
   }
   clearEmptyState(refs.incidentList);
-  refs.incidentList.innerHTML = "";
+  refs.incidentList.replaceChildren();
   incidents.forEach((incident) => {
-    const el = document.createElement("article");
-    el.className = "timeline-item";
-    el.innerHTML = `
-      <span class="timeline-severity severity-${incident.severity}">${incident.severity}</span>
-      <strong>#${incident.id} ${incident.title}</strong>
-      <div>${incident.summary}</div>
-      <div class="timeline-meta">${incident.status} | root cause: ${incident.root_cause_hypothesis || "pending"}</div>
-    `;
+    const el = createNode("article", null, "timeline-item");
+    el.appendChild(createNode("span", incident.severity, `timeline-severity severity-${incident.severity}`));
+    el.appendChild(createNode("strong", `#${incident.id} ${incident.title}`));
+    el.appendChild(createNode("div", incident.summary || ""));
+    el.appendChild(createNode("div", `${incident.status} | root cause: ${incident.root_cause_hypothesis || "pending"}`, "timeline-meta"));
     refs.incidentList.appendChild(el);
   });
   timeline.slice(0, 3).forEach((event) => {
-    const el = document.createElement("article");
-    el.className = "timeline-item";
-    el.innerHTML = `
-      <span class="timeline-severity severity-info">${event.event_type.replaceAll("_", " ")}</span>
-      <strong>Incident ${event.incident_id}</strong>
-      <div>${event.message}</div>
-      <div class="timeline-meta">${new Date(event.timestamp).toLocaleString()}</div>
-    `;
+    const el = createNode("article", null, "timeline-item");
+    el.appendChild(createNode("span", event.event_type.replaceAll("_", " "), "timeline-severity severity-info"));
+    el.appendChild(createNode("strong", `Incident ${event.incident_id}`));
+    el.appendChild(createNode("div", event.message || ""));
+    el.appendChild(createNode("div", new Date(event.timestamp).toLocaleString(), "timeline-meta"));
     refs.incidentList.appendChild(el);
   });
 }
@@ -278,11 +306,19 @@ function renderReasoning(decisions, feedbackSummary) {
   }
   const latest = decisions[decisions.length - 1];
   clearEmptyState(refs.reasoningPanel);
-  refs.reasoningPanel.innerHTML = `
-    <div class="reasoning-item"><strong>Anomaly detected</strong>${latest.risk_level} risk with decision "${latest.decision}".</div>
-    <div class="reasoning-item"><strong>Decision made</strong>${latest.why}</div>
-    <div class="reasoning-item"><strong>Feedback learning</strong>Success ${formatRatio(feedbackSummary.action_success_rate)}, false positives ${formatRatio(feedbackSummary.false_positive_rate)}.</div>
-  `;
+  refs.reasoningPanel.replaceChildren();
+  const first = createNode("div", null, "reasoning-item");
+  first.appendChild(createNode("strong", "Anomaly detected"));
+  first.appendChild(document.createTextNode(`${latest.risk_level} risk with decision "${latest.decision}".`));
+  refs.reasoningPanel.appendChild(first);
+  const second = createNode("div", null, "reasoning-item");
+  second.appendChild(createNode("strong", "Decision made"));
+  second.appendChild(document.createTextNode(latest.why || "No decision reasoning available."));
+  refs.reasoningPanel.appendChild(second);
+  const third = createNode("div", null, "reasoning-item");
+  third.appendChild(createNode("strong", "Feedback learning"));
+  third.appendChild(document.createTextNode(`Success ${formatRatio(feedbackSummary.action_success_rate)}, false positives ${formatRatio(feedbackSummary.false_positive_rate)}.`));
+  refs.reasoningPanel.appendChild(third);
 }
 
 function updateValidationChart(validation) {
@@ -381,18 +417,20 @@ async function loadLogs() {
   const level = refs.logLevelFilter?.value || "";
   const payload = await api(`/api/v1/logs?limit=80${level ? `&level=${encodeURIComponent(level)}` : ""}`);
   const entries = safeArray(payload.data?.entries);
-  refs.logsBody.innerHTML = "";
+  refs.logsBody.replaceChildren();
   if (!entries.length) {
-    refs.logsBody.innerHTML = '<tr><td colspan="3">No logs available.</td></tr>';
+    const tr = document.createElement("tr");
+    const td = createNode("td", "No logs available.");
+    td.colSpan = 3;
+    tr.appendChild(td);
+    refs.logsBody.appendChild(tr);
     return;
   }
   entries.forEach((entry) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "-"}</td>
-      <td>${entry.level || "-"}</td>
-      <td>${entry.message || "-"}</td>
-    `;
+    tr.appendChild(createNode("td", entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "-"));
+    tr.appendChild(createNode("td", entry.level || "-"));
+    tr.appendChild(createNode("td", entry.message || "-"));
     refs.logsBody.appendChild(tr);
   });
 }
@@ -430,7 +468,7 @@ async function loadFeedback() {
   refs.feedbackFalseRate.textContent = formatRatio(summary.false_positive_rate);
   refs.feedbackRecurrenceRate.textContent = formatRatio(summary.recurrence_rate);
   refs.feedbackRecordCount.textContent = numberOr(summary.total_records).toFixed(0);
-  refs.feedbackList.innerHTML = "";
+  refs.feedbackList.replaceChildren();
   if (!records.length) {
     setEmptyState(refs.feedbackList, "No feedback records yet.");
     return;
@@ -438,14 +476,11 @@ async function loadFeedback() {
   clearEmptyState(refs.feedbackList);
   records.forEach((record) => {
     const label = record.action_effective ? "confidence increased" : "confidence decreased";
-    const el = document.createElement("article");
-    el.className = "timeline-item";
-    el.innerHTML = `
-      <span class="timeline-severity severity-info">${label}</span>
-      <strong>${record.metric_name || "system"} / ${record.process_name || "general"}</strong>
-      <div>${record.notes || "Feedback sample captured."}</div>
-      <div class="timeline-meta">${record.action_effective ? "validation passed" : "validation failed"} | ${new Date(record.created_at).toLocaleString()}</div>
-    `;
+    const el = createNode("article", null, "timeline-item");
+    el.appendChild(createNode("span", label, "timeline-severity severity-info"));
+    el.appendChild(createNode("strong", `${record.metric_name || "system"} / ${record.process_name || "general"}`));
+    el.appendChild(createNode("div", record.notes || "Feedback sample captured."));
+    el.appendChild(createNode("div", `${record.action_effective ? "validation passed" : "validation failed"} | ${new Date(record.created_at).toLocaleString()}`, "timeline-meta"));
     refs.feedbackList.appendChild(el);
   });
 }
@@ -463,8 +498,10 @@ async function loadValidation() {
   try {
     const payload = await api(`/api/v1/actions/${state.latestActionId}/validation`);
     updateValidationChart(payload.data.validation);
-  } catch {
-    refs.validationBadge.textContent = "Validation pending";
+  } catch (error) {
+    if (error.status === 404) refs.validationBadge.textContent = "Validation pending";
+    else if (error.status === 401 || error.status === 403) refs.validationBadge.textContent = "Validation unauthorized";
+    else refs.validationBadge.textContent = "Validation unavailable";
   }
 }
 
@@ -480,6 +517,7 @@ async function saveAutonomyMode() {
 async function refresh() {
   if (state.refreshInFlight) return;
   state.refreshInFlight = true;
+  clearGlobalError();
   const results = await Promise.allSettled([
       loadStats(),
       loadHistory(),
@@ -492,16 +530,22 @@ async function refresh() {
       loadAutonomyStatus(),
       loadFeedback(),
     ]);
+  const failures = [];
   results.forEach((result) => {
     if (result.status === "rejected") {
       console.error(result.reason);
+      failures.push(result.reason?.message || "Dashboard refresh failed.");
     }
   });
   try {
     await loadValidation();
   } catch (error) {
     console.error(error);
+    failures.push(error?.message || "Validation data failed to load.");
   } finally {
+    if (failures.length) {
+      showGlobalError(`Some live panels could not refresh. ${failures[0]}`);
+    }
     state.refreshInFlight = false;
   }
 }

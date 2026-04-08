@@ -12,9 +12,15 @@ def ensure_seed_data() -> None:
     """Create the default admin user when the database is empty."""
     from flask import current_app
 
+    if not current_app.config.get("SEED_DEFAULT_ADMIN", False):
+        return
+
     username = current_app.config["DEFAULT_ADMIN_USERNAME"]
     password = current_app.config["DEFAULT_ADMIN_PASSWORD"]
     role = current_app.config["DEFAULT_ADMIN_ROLE"]
+    if not password:
+        current_app.logger.warning("Skipping default admin seed because no admin password is configured.")
+        return
 
     if not User.query.filter_by(username=username).first():
         admin = User(

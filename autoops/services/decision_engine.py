@@ -6,12 +6,15 @@ from typing import Any
 
 from flask import Flask
 
+from autoops.services.settings import SettingsService
+
 
 class DecisionEngine:
     """Turn analytics + incidents + feedback into an explainable action decision."""
 
     def __init__(self, app: Flask) -> None:
         self.app = app
+        self.settings = SettingsService(app)
 
     def decide(
         self,
@@ -51,8 +54,10 @@ class DecisionEngine:
             decision = "recommend_action"
             reasoning = "An incident is active, past outcomes are reasonably strong, and a guarded remediation exists."
 
+        autonomy_mode = self.settings.get_autonomy_mode()
+
         if (
-            self.app.config["AUTONOMY_MODE"] == "autonomous"
+            autonomy_mode == "autonomous"
             and incidents
             and healing_candidates
             and confidence >= self.app.config["DECISION_CONFIDENCE_THRESHOLD"]
@@ -72,5 +77,5 @@ class DecisionEngine:
             "risk_level": analysis["risk"]["label"],
             "why": reasoning,
             "recommended_action_type": healing_candidates[0]["action_type"] if healing_candidates else None,
-            "mode": self.app.config["AUTONOMY_MODE"],
+            "mode": autonomy_mode,
         }

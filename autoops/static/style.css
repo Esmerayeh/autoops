@@ -51,6 +51,14 @@ a { color: inherit; }
 .meta-value { font-family: "IBM Plex Mono", monospace; }
 
 .content { padding: 28px; display: grid; gap: 22px; min-width: 0; overflow-x: hidden; }
+.global-alert {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 107, 138, 0.22);
+  background: rgba(255, 107, 138, 0.12);
+  color: #ffd4dc;
+}
+.hidden { display: none !important; }
 .topbar, .status-strip, .hero-grid, .metrics-grid, .chart-grid, .dual-grid, .command-center-grid { display: grid; gap: 18px; }
 .topbar { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .topbar h1, .card-header h2, .auth-title { margin: 0; }

@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Any
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from autoops.api.routes import api_bp, legacy_bp
 from autoops.auth.routes import auth_bp
@@ -33,6 +33,7 @@ def create_app(config_name: str | None = None, overrides: dict[str, Any] | None 
     app.config.from_object(config_by_name[config_name])
     if overrides:
         app.config.update(overrides)
+    validate_runtime_config(app)
 
     configure_logging(app)
     register_extensions(app)
@@ -57,6 +58,14 @@ def register_extensions(app: Flask) -> None:
     limiter.init_app(app)
 
 
+def validate_runtime_config(app: Flask) -> None:
+    """Fail fast on obviously unsafe production settings."""
+    if app.config["ENV_NAME"] != "production":
+        return
+    if app.config["SECRET_KEY"] == "dev-only-secret-change-me":
+        raise RuntimeError("AUTOOPS_SECRET_KEY must be set in production.")
+
+
 def register_blueprints(app: Flask) -> None:
     """Register HTTP blueprints."""
     app.register_blueprint(auth_bp)
@@ -71,6 +80,12 @@ def register_hooks(app: Flask) -> None:
     @login_manager.user_loader
     def load_user(user_id: str) -> User | None:
         return db.session.get(User, int(user_id))
+
+    @login_manager.unauthorized_handler
+    def unauthorized_handler():  # type: ignore[no-untyped-def]
+        if request.path.startswith("/api/"):
+            return jsonify(error_response("unauthorized", "Authentication required.", 401)), 401
+        return redirect(url_for("auth.login", next=request.path))
 
     @app.before_request
     def before_request() -> None:

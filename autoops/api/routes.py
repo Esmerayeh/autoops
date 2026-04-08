@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, current_app, jsonify, request
+import time
+
+from flask import Blueprint, Response, current_app, jsonify, request, stream_with_context
 from flask_login import login_required
 
 from autoops.api.schemas import validate_api_envelope, validate_autonomy_status, validate_cluster_overview, validate_health_payload
-from autoops.extensions import csrf, limiter
+from autoops.extensions import limiter
 from autoops.services.runtime import runtime_manager
 from autoops.utils.responses import success_response
+from autoops.utils.security import require_role
 from autoops.utils.validators import clamp_int
 
 api_bp = Blueprint("api", __name__, url_prefix="/api/v1")
@@ -113,13 +116,14 @@ def autonomy_status_v1():
 
 @api_bp.route("/autonomy/mode", methods=["POST"])
 @login_required
-@csrf.exempt
+@require_role("admin")
 def autonomy_mode_v1():
     payload = request.get_json(silent=True) or {}
     mode = str(payload.get("mode", "")).lower()
     if mode not in {"manual", "assisted", "autonomous"}:
         return jsonify({"ok": False, "error": {"message": "Mode must be manual, assisted, or autonomous."}}), 400
-    current_app.config["AUTONOMY_MODE"] = mode
+    assert runtime_manager.settings_service is not None
+    runtime_manager.settings_service.set_autonomy_mode(mode)
     return jsonify(success_response({"autonomy": monitoring_service().get_autonomy_status()}))
 
 
@@ -173,6 +177,7 @@ def anomalies_v1():
 @api_bp.route("/settings")
 @login_required
 def settings_v1():
+    autonomy_mode = runtime_manager.settings_service.get_autonomy_mode() if runtime_manager.settings_service else current_app.config["AUTONOMY_MODE"]
     data = {
         "environment": current_app.config["ENV_NAME"],
         "self_healing_enabled": current_app.config["ENABLE_SELF_HEALING"],
@@ -180,7 +185,7 @@ def settings_v1():
         "operator_confirmation_required": current_app.config["OPERATOR_CONFIRMATION_REQUIRED"],
         "warning_threshold": current_app.config["WARNING_THRESHOLD"],
         "critical_threshold": current_app.config["CRITICAL_THRESHOLD"],
-        "autonomy_mode": current_app.config["AUTONOMY_MODE"],
+        "autonomy_mode": autonomy_mode,
     }
     return jsonify(success_response({"settings": data}))
 
@@ -225,7 +230,7 @@ def cluster_tasks_v1():
 
 @api_bp.route("/cluster/tasks", methods=["POST"])
 @login_required
-@csrf.exempt
+@require_role("admin")
 def cluster_create_task_v1():
     payload = request.get_json(silent=True) or {}
     task_type = str(payload.get("task_type") or "").strip()
@@ -241,7 +246,7 @@ def cluster_create_task_v1():
 
 @api_bp.route("/cluster/nodes/heartbeat", methods=["POST"])
 @login_required
-@csrf.exempt
+@require_role("admin")
 def cluster_heartbeat_v1():
     payload = request.get_json(silent=True) or {}
     try:
@@ -256,8 +261,19 @@ def cluster_heartbeat_v1():
 @api_bp.route("/stream")
 @login_required
 def stream_v1():
-    payload = monitoring_service().get_live_summary()
-    return Response(f"data: {jsonify(success_response(payload)).get_data(as_text=True)}\n\n", mimetype="text/event-stream")
+    interval = max(1.0, float(current_app.config["SAMPLE_INTERVAL_SECONDS"]))
+
+    @stream_with_context
+    def event_stream():
+        while True:
+            payload = success_response(monitoring_service().get_live_summary())
+            yield f"data: {jsonify(payload).get_data(as_text=True)}\n\n"
+            time.sleep(interval)
+
+    response = Response(event_stream(), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
 
 @legacy_bp.route("/stats")

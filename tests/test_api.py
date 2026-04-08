@@ -1,6 +1,6 @@
 def test_health_requires_auth(client):
     response = client.get("/api/v1/health")
-    assert response.status_code in {302, 401}
+    assert response.status_code == 401
 
 
 def test_stats_api(auth_client):
@@ -55,6 +55,9 @@ def test_autonomy_status_and_mode_update(auth_client):
     assert status_response.status_code == 200
     update_response = auth_client.post("/api/v1/autonomy/mode", json={"mode": "manual"})
     assert update_response.status_code == 200
+    refreshed = auth_client.get("/api/v1/autonomy/status")
+    payload = refreshed.get_json()
+    assert payload["data"]["autonomy"]["mode"] == "manual"
 
 
 def test_action_validation_missing(auth_client):
@@ -101,3 +104,10 @@ def test_cluster_task_create_and_list(auth_client):
     listed = list_response.get_json()
     assert listed["ok"] is True
     assert len(listed["data"]["tasks"]) >= 1
+
+
+def test_non_admin_cannot_change_autonomy_mode(client):
+    client.post("/signup", data={"username": "viewer1", "password": "viewerpass1"}, follow_redirects=True)
+    client.post("/login", data={"username": "viewer1", "password": "viewerpass1"}, follow_redirects=True)
+    response = client.post("/api/v1/autonomy/mode", json={"mode": "autonomous"})
+    assert response.status_code == 403
