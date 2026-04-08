@@ -46,6 +46,7 @@ class MonitoringService:
         self.feedback = FeedbackLearningService(app)
         self.incidents = IncidentService()
         self.decision_engine = DecisionEngine(app)
+        self.control_plane = None
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._last_network = psutil.net_io_counters()
@@ -96,6 +97,8 @@ class MonitoringService:
                     )
                     self._record_actions(actions)
                     self._persist_if_needed(snapshot, analysis, actions)
+                    if self.control_plane:
+                        self.control_plane.update_local_node_snapshot(snapshot["metrics"])
                     self._queue_feedback_validation(snapshot, analysis, actions)
                     self._validate_previous_actions(snapshot)
                     self.incidents.resolve_if_recovered(incidents, self._health_score(snapshot, analysis))
@@ -351,6 +354,7 @@ class MonitoringService:
                 "analysis": analysis,
                 "recent_actions": recent_actions,
                 "health_score": health_score,
+                "cluster": self.control_plane.get_cluster_overview() if self.control_plane else None,
                 "status_bar": {
                     "environment": self.app.config["ENV_NAME"],
                     "sampler_state": "running" if self._thread and self._thread.is_alive() else "stopped",

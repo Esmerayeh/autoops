@@ -52,6 +52,18 @@ class BaseConfig:
     ALLOW_WEBHOOKS = _bool("AUTOOPS_ALLOW_WEBHOOKS", False)
     EXTERNAL_WEBHOOK_URL = os.getenv("AUTOOPS_EXTERNAL_WEBHOOK_URL", "")
     SAFE_TEMP_PATH = os.getenv("AUTOOPS_SAFE_TEMP_PATH", str(BASE_DIR / "tmp"))
+    DISTRIBUTED_MODE = _bool("AUTOOPS_DISTRIBUTED_MODE", False)
+    CLUSTER_NAME = os.getenv("AUTOOPS_CLUSTER_NAME", "autoops-local-cluster")
+    NODE_ID = os.getenv("AUTOOPS_NODE_ID", os.getenv("HOSTNAME") or os.getenv("COMPUTERNAME") or "autoops-node-1")
+    NODE_NAME = os.getenv("AUTOOPS_NODE_NAME", NODE_ID)
+    NODE_ROLE = os.getenv("AUTOOPS_NODE_ROLE", "control-plane")
+    NODE_REGION = os.getenv("AUTOOPS_NODE_REGION", "local")
+    NODE_ENVIRONMENT = os.getenv("AUTOOPS_NODE_ENVIRONMENT", ENV_NAME)
+    NODE_HEARTBEAT_TTL_SECONDS = max(10, int(os.getenv("AUTOOPS_NODE_HEARTBEAT_TTL_SECONDS", "30")))
+    CLUSTER_ALLOW_REMOTE_AGENTS = _bool("AUTOOPS_CLUSTER_ALLOW_REMOTE_AGENTS", False)
+    STREAM_BACKEND = os.getenv("AUTOOPS_STREAM_BACKEND", "inmemory")
+    TENANCY_ENABLED = _bool("AUTOOPS_TENANCY_ENABLED", False)
+    DEFAULT_TENANT = os.getenv("AUTOOPS_DEFAULT_TENANT", "default")
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

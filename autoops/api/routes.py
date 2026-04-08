@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_login import login_required
 
-from autoops.api.schemas import validate_api_envelope, validate_autonomy_status, validate_health_payload
+from autoops.api.schemas import validate_api_envelope, validate_autonomy_status, validate_cluster_overview, validate_health_payload
 from autoops.extensions import csrf, limiter
 from autoops.services.runtime import runtime_manager
 from autoops.utils.responses import success_response
@@ -18,6 +18,11 @@ legacy_bp = Blueprint("legacy", __name__)
 def monitoring_service():
     assert runtime_manager.monitoring_service is not None
     return runtime_manager.monitoring_service
+
+
+def control_plane_service():
+    assert runtime_manager.control_plane_service is not None
+    return runtime_manager.control_plane_service
 
 
 def alert_level(value: float) -> str:
@@ -185,6 +190,67 @@ def settings_v1():
 def policies_v1():
     data = monitoring_service().healing.policies()
     return jsonify(success_response({"policies": data}, {"count": len(data)}))
+
+
+@api_bp.route("/cluster/overview")
+@login_required
+def cluster_overview_v1():
+    data = control_plane_service().get_cluster_overview()
+    validate_cluster_overview(data)
+    return jsonify(success_response({"cluster": data}))
+
+
+@api_bp.route("/cluster/nodes")
+@login_required
+def cluster_nodes_v1():
+    limit = clamp_int(request.args.get("limit"), 50, 5, 200)
+    data = control_plane_service().get_nodes(limit.value)
+    return jsonify(success_response({"nodes": data}, {"count": len(data)}))
+
+
+@api_bp.route("/cluster/dependencies")
+@login_required
+def cluster_dependencies_v1():
+    edges = control_plane_service().get_dependency_map()
+    return jsonify(success_response({"dependencies": edges}, {"count": len(edges)}))
+
+
+@api_bp.route("/cluster/tasks")
+@login_required
+def cluster_tasks_v1():
+    limit = clamp_int(request.args.get("limit"), 20, 1, 100)
+    tasks = control_plane_service().get_tasks(limit.value)
+    return jsonify(success_response({"tasks": tasks}, {"count": len(tasks)}))
+
+
+@api_bp.route("/cluster/tasks", methods=["POST"])
+@login_required
+@csrf.exempt
+def cluster_create_task_v1():
+    payload = request.get_json(silent=True) or {}
+    task_type = str(payload.get("task_type") or "").strip()
+    if not task_type:
+        return jsonify({"ok": False, "error": {"message": "task_type is required."}}), 400
+    task = control_plane_service().create_task(
+        task_type=task_type,
+        target_node_id=payload.get("target_node_id"),
+        payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+    )
+    return jsonify(success_response({"task": task})), 201
+
+
+@api_bp.route("/cluster/nodes/heartbeat", methods=["POST"])
+@login_required
+@csrf.exempt
+def cluster_heartbeat_v1():
+    payload = request.get_json(silent=True) or {}
+    try:
+        node = control_plane_service().heartbeat(payload)
+    except ValueError as error:
+        return jsonify({"ok": False, "error": {"message": str(error)}}), 400
+    except PermissionError as error:
+        return jsonify({"ok": False, "error": {"message": str(error)}}), 403
+    return jsonify(success_response({"node": node}))
 
 
 @api_bp.route("/stream")

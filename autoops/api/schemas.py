@@ -42,3 +42,23 @@ def validate_api_envelope(payload: dict[str, Any]) -> dict[str, Any]:
     if "ok" not in payload or "timestamp" not in payload or "data" not in payload:
         raise ValueError("Invalid API envelope")
     return payload
+
+
+def validate_cluster_overview(payload: dict[str, Any]) -> dict[str, Any]:
+    required = {
+        "cluster_name": str,
+        "tenant_id": str,
+        "distributed_mode": bool,
+        "node_count": int,
+        "online_nodes": int,
+        "offline_nodes": int,
+        "dependency_edges": int,
+        "queued_tasks": int,
+        "capabilities": dict,
+    }
+    for key, expected_type in required.items():
+        if key not in payload:
+            raise ValueError(f"Missing cluster overview field: {key}")
+        if not isinstance(payload[key], expected_type):
+            raise TypeError(f"Invalid cluster overview field type for {key}")
+    return payload

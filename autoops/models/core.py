@@ -172,3 +172,53 @@ class FeedbackRecord(db.Model):
     confidence_after = db.Column(db.Float, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     raw_payload = db.Column(JSON, nullable=True)
+
+
+class ClusterNode(db.Model):
+    __tablename__ = "cluster_nodes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    node_id = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    tenant_id = db.Column(db.String(80), nullable=False, default="default", index=True)
+    cluster_name = db.Column(db.String(120), nullable=False, default="autoops-local-cluster", index=True)
+    node_name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(40), nullable=False, default="agent")
+    environment = db.Column(db.String(40), nullable=False, default="development")
+    region = db.Column(db.String(60), nullable=False, default="local")
+    status = db.Column(db.String(30), nullable=False, default="online")
+    last_seen_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    capabilities = db.Column(JSON, nullable=True)
+    metadata_payload = db.Column(JSON, nullable=True)
+    latest_metrics = db.Column(JSON, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class ServiceDependency(db.Model):
+    __tablename__ = "service_dependencies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.String(80), nullable=False, default="default", index=True)
+    cluster_name = db.Column(db.String(120), nullable=False, default="autoops-local-cluster", index=True)
+    source = db.Column(db.String(120), nullable=False, index=True)
+    target = db.Column(db.String(120), nullable=False, index=True)
+    dependency_type = db.Column(db.String(40), nullable=False, default="internal")
+    confidence = db.Column(db.Float, nullable=False, default=0.8)
+    last_seen_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    metadata_payload = db.Column(JSON, nullable=True)
+
+
+class OrchestrationTask(db.Model):
+    __tablename__ = "orchestration_tasks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.String(80), nullable=False, default="default", index=True)
+    cluster_name = db.Column(db.String(120), nullable=False, default="autoops-local-cluster", index=True)
+    task_type = db.Column(db.String(80), nullable=False)
+    target_node_id = db.Column(db.String(120), nullable=True, index=True)
+    status = db.Column(db.String(30), nullable=False, default="queued", index=True)
+    execution_mode = db.Column(db.String(30), nullable=False, default="simulated")
+    payload = db.Column(JSON, nullable=True)
+    result_payload = db.Column(JSON, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)

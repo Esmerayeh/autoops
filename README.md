@@ -28,6 +28,7 @@ This project shows how to evolve a simple monitoring dashboard into an explainab
 - Secure auth with password hashing, login throttling, session protection, account lockout, and login audit records
 - Versioned APIs under `/api/v1/*` with legacy compatibility for `/stats`, `/history`, `/processes`, and `/logs`
 - Responsive dashboard with health score, anomaly badges, alert timeline, healing history, process filtering, logs intelligence, and AI command-center workflows
+- Distributed MVP foundation with cluster node registry, heartbeat APIs, dependency graph seeding, and simulated orchestration tasks
 
 ## Architecture
 
@@ -55,7 +56,39 @@ flowchart LR
   DB --> Reco["system_recommendations"]
   DB --> IncidentDB["incidents"]
   DB --> FeedbackDB["feedback_records"]
+  API --> ControlPlane["Distributed Control Plane"]
+  ControlPlane --> Nodes["cluster_nodes"]
+  ControlPlane --> Graph["service_dependencies"]
+  ControlPlane --> Tasks["orchestration_tasks"]
 ```
+
+## Distributed MVP foundation
+
+AutoOps AI is still intentionally local-first, but the repo now includes the first real control-plane building blocks for a distributed follow-on MVP:
+
+- cluster node registry with heartbeat tracking
+- seeded service dependency map for topology visualization
+- simulated orchestration task queue for cluster-wide actions
+- tenant and cluster identifiers in the data model
+- control-plane APIs that let this project evolve into an agent + control-plane architecture
+
+Current distributed-ready endpoints:
+
+- `GET /api/v1/cluster/overview`
+- `GET /api/v1/cluster/nodes`
+- `POST /api/v1/cluster/nodes/heartbeat`
+- `GET /api/v1/cluster/dependencies`
+- `GET /api/v1/cluster/tasks`
+- `POST /api/v1/cluster/tasks`
+
+This keeps the current MVP understandable while clearly preparing for:
+
+- agent-based collection across multiple nodes
+- cluster-wide orchestration
+- dependency-aware remediation
+- streaming backends like NATS, Redis Streams, or Kafka
+- distributed metric/event storage
+- tenant-aware RBAC for multi-tenant environments
 
 ## Local setup
 
@@ -76,6 +109,16 @@ Default dev credentials:
 - Password: `admin123!`
 
 If you skip `requirements-ml.txt`, AutoOps AI will still run and automatically fall back to rule-based analytics.
+
+To preview the distributed foundation locally, optionally enable:
+
+```powershell
+$env:AUTOOPS_DISTRIBUTED_MODE="true"
+$env:AUTOOPS_CLUSTER_NAME="demo-cluster"
+$env:AUTOOPS_NODE_ID="control-plane-1"
+$env:AUTOOPS_NODE_ROLE="control-plane"
+python app.py
+```
 
 ## Database and migrations
 
