@@ -71,6 +71,8 @@ const refs = {
   dashboardError: document.getElementById("dashboard-error"),
 };
 
+const sectionNavLinks = Array.from(document.querySelectorAll('.sidebar-nav a[href^="#"]'));
+
 function numberOr(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -648,11 +650,35 @@ function bindEvents() {
       renderProcesses();
     });
   });
+
+  sectionNavLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const targetId = link.getAttribute("href");
+      if (!targetId) return;
+      const target = document.querySelector(targetId);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    });
+  });
+}
+
+function normalizeInitialHashScroll() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const target = document.querySelector(hash);
+  if (!target) return;
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ block: "start" });
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  });
 }
 
 window.addEventListener("load", () => {
   createCharts();
   bindEvents();
+  normalizeInitialHashScroll();
   refresh();
   setInterval(() => {
     if (state.autoRefresh) refresh();

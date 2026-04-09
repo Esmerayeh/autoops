@@ -50,7 +50,7 @@ a { color: inherit; }
 .sidebar-footer { margin-top: auto; display: grid; gap: 8px; }
 .meta-value { font-family: "IBM Plex Mono", monospace; }
 
-.content { padding: 28px; display: grid; gap: 22px; min-width: 0; overflow-x: hidden; }
+.content { padding: 28px; display: grid; gap: 22px; min-width: 0; overflow-x: hidden; overflow-anchor: none; }
 .global-alert {
   padding: 14px 16px;
   border-radius: 18px;
@@ -73,12 +73,15 @@ a { color: inherit; }
 .status-chip strong { font-size: 0.95rem; }
 .status-wide { flex: 1; }
 
-.hero-grid, .chart-grid, .dual-grid, .command-center-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hero-grid, .chart-grid, .dual-grid, .command-center-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
 .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .glass-card {
   background: var(--panel); border: 1px solid var(--panel-border); border-radius: 24px;
-  padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(20px); min-width: 0;
+  padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(20px); min-width: 0; align-self: start;
 }
 .health-card { min-height: 220px; }
 .host-grid, .mini-stats { justify-content: space-between; }
