@@ -21,6 +21,9 @@ system.log
 .autoops-streams.db
 .autoops-streams.db-shm
 .autoops-streams.db-wal
+autoops.db
+autoops.db-shm
+autoops.db-wal
 
 # OS / editor
 .DS_Store

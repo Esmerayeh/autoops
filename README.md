@@ -6,6 +6,28 @@ AutoOps AI is a polished AIOps platform built with Flask, SQLite, psutil, SQLAlc
 
 For Render deploys, pin Python with the repo-root `.python-version` file or set `PYTHON_VERSION=3.12.8` in the service environment. This app is currently validated against Python 3.12 for best dependency compatibility.
 
+## Render deployment
+
+Use these exact Render settings for the current Flask deployment:
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn app:app --config gunicorn.conf.py`
+- `PYTHON_VERSION=3.12.8`
+- `AUTOOPS_ENV=production`
+- `AUTOOPS_SECRET_KEY=<strong-random-secret>`
+- `AUTOOPS_SEED_DEFAULT_ADMIN=false`
+- `WEB_CONCURRENCY=1`
+
+Why `WEB_CONCURRENCY=1` matters:
+
+- the app uses SQLite by default
+- the monitoring sampler runs in-process
+- runtime caches and background state are worker-local
+
+Running multiple Gunicorn workers can make telemetry and dashboard state inconsistent.
+
+If Render shows clone/build failures such as `Could not resolve host: github.com`, S3 cache timeouts, or missing `/opt/render/project/src`, treat that as a Render platform/build-fetch problem first. Clear the build cache and redeploy before changing Flask code.
+
 ## Why this project matters
 
 This project shows how to evolve a simple monitoring dashboard into an explainable operations platform:
@@ -102,6 +124,13 @@ python app.py
 ```
 
 Open `http://127.0.0.1:5000`.
+
+The active dashboard assets for the Flask app live under:
+
+- `autoops/templates/`
+- `autoops/static/`
+
+The repo also contains older root-level `templates/` and `static/` folders that are not the primary Flask UI source of truth.
 
 Dev-only seeded credentials are available only when `AUTOOPS_SEED_DEFAULT_ADMIN=true` in development/testing.
 
