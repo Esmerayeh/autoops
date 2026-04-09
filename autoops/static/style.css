@@ -90,13 +90,22 @@ a { color: inherit; }
 .progress-fill.neutral { background: linear-gradient(90deg, #60a5fa, #818cf8); }
 
 .chart-card { overflow: hidden; }
-.chart-card canvas { width: 100%; min-height: 240px; max-width: 100%; }
+.chart-card canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  max-width: 100%;
+}
 .table-card, .timeline-card { min-height: 420px; }
 .command-card { min-height: 250px; }
 .chart-stage {
   position: relative;
+  height: 240px;
   min-height: 240px;
+  max-height: 240px;
   margin-top: 10px;
+  overflow: hidden;
 }
 .chart-empty-state {
   position: absolute;
@@ -224,5 +233,9 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
   .topbar, .hero-grid, .chart-grid, .dual-grid, .command-center-grid, .auth-page { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: 1fr; }
   .command-grid { grid-template-columns: 1fr; }
-  .chart-stage { min-height: 220px; }
+  .chart-stage {
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+  }
 }
