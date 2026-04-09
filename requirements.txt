@@ -5,7 +5,7 @@ Flask-Migrate==4.0.7
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
 fastapi==0.115.0
-SQLAlchemy==2.0.29
+SQLAlchemy==2.0.48
 alembic==1.13.1
 python-dotenv==1.0.1
 pydantic==2.9.2

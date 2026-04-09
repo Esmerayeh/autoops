@@ -7,7 +7,9 @@ from passlib.context import CryptContext
 from control_plane.app.core.config import settings
 
 
-password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use PBKDF2 as the default control-plane hash to avoid bcrypt runtime issues on
+# newer local interpreters while still accepting any legacy bcrypt hashes.
+password_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 
 @dataclass(slots=True)

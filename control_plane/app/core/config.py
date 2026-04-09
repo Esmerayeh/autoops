@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     app_env: str = "development"
 
-    database_url: str = "postgresql+psycopg://autoops:autoops@localhost:5432/autoops"
+    database_url: str = "sqlite:///./.autoops-control-plane.db"
     redis_url: str = "redis://localhost:6379/0"
+    stream_url: str = "sqlite:///./.autoops-streams.db"
 
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"

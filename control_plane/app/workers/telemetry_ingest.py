@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -131,6 +132,8 @@ def _process_payload(db: Session, publisher: EventPublisher, envelope: dict[str,
     if event_type == "telemetry.host_metrics":
         incident = _record_cpu_incident(db, tenant_id, payload)
         if incident:
+            if not incident.id:
+                db.flush()
             publisher.bus.publish(
                 "autoops.incidents",
                 incident.id,
@@ -168,9 +171,12 @@ def main() -> None:
     publisher = EventPublisher()
     db = SessionLocal()
     try:
+        run_once = os.getenv("AUTOOPS_WORKER_RUN_ONCE") == "1"
         while True:
             batches = bus.consume(TELEMETRY_STREAM, GROUP_NAME, CONSUMER_NAME, count=20, block_ms=3000)
             if not batches:
+                if run_once:
+                    break
                 continue
             for stream_name, messages in batches:
                 for message_id, fields in messages:
@@ -182,6 +188,8 @@ def main() -> None:
                     except Exception:
                         db.rollback()
                         LOGGER.exception("Failed to process telemetry message %s", message_id)
+            if run_once:
+                break
     finally:
         db.close()
 

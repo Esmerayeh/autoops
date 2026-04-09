@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from autoops import create_app
-from autoops.extensions import db
-from autoops.services.bootstrap import ensure_seed_data
-
 
 @pytest.fixture()
 def app():
+    from autoops import create_app
+    from autoops.extensions import db
+    from autoops.services.bootstrap import ensure_seed_data
+
     app = create_app(
         "testing",
         overrides={

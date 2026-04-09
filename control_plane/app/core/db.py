@@ -6,7 +6,11 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from control_plane.app.core.config import settings
 
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+engine_kwargs = {"pool_pre_ping": True}
+if settings.database_url.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.database_url, **engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 

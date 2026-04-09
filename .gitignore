@@ -10,6 +10,17 @@ env/
 # Logs (generated at runtime)
 logs/
 system.log
+*.log
+*.err.log
+
+# Local distributed MVP runtime state
+.agent-state.json
+.agent-policies.json
+.agent-spool.db
+.autoops-control-plane.db
+.autoops-streams.db
+.autoops-streams.db-shm
+.autoops-streams.db-wal
 
 # OS / editor
 .DS_Store

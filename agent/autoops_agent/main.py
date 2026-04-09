@@ -1,3 +1,4 @@
+import os
 import time
 
 from .services.enrollment import EnrollmentService
@@ -16,11 +17,14 @@ def main() -> None:
     policy_service = PolicySyncService()
     remediation_service = RemediationRunnerService()
 
+    run_once = os.getenv("AUTOOPS_AGENT_RUN_ONCE") == "1"
     while True:
         policy_service.maybe_refresh()
         heartbeat_service.send()
         telemetry_service.collect_and_flush()
         remediation_service.poll_and_execute()
+        if run_once:
+            break
         time.sleep(5)
 
 

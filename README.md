@@ -116,6 +116,38 @@ Production should set:
 
 If you skip `requirements-ml.txt`, AutoOps AI will still run and automatically fall back to rule-based analytics.
 
+## Distributed control-plane MVP local run
+
+The new distributed MVP can now run locally without Docker by default:
+
+- control-plane metadata uses SQLite at `./.autoops-control-plane.db`
+- stream transport uses a SQLite-backed local stream bus at `./.autoops-streams.db`
+
+Run it with:
+
+```powershell
+.venv\Scripts\Activate.ps1
+copy .env.example .env
+py -m control_plane.scripts.bootstrap_demo
+uvicorn control_plane.app.main:app --reload --port 8000
+```
+
+In a second terminal:
+
+```powershell
+$env:AUTOOPS_WORKER_RUN_ONCE="1"
+py -m control_plane.app.workers.telemetry_ingest
+```
+
+In a third terminal:
+
+```powershell
+$env:AUTOOPS_AGENT_RUN_ONCE="1"
+py -m agent.autoops_agent.main
+```
+
+For a continuous demo, omit the `*_RUN_ONCE` environment variables.
+
 To preview the distributed foundation locally, optionally enable:
 
 ```powershell

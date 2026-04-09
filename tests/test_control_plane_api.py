@@ -1,3 +1,7 @@
+import os
+
+os.environ["AUTOOPS_SKIP_STARTUP_INIT"] = "1"
+
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
