@@ -44,7 +44,6 @@ def create_app(config_name: str | None = None, overrides: dict[str, Any] | None 
     with app.app_context():
         db.create_all()
         ensure_seed_data()
-        runtime_manager.start(app)
 
     return app
 
@@ -89,6 +88,8 @@ def register_hooks(app: Flask) -> None:
 
     @app.before_request
     def before_request() -> None:
+        if not runtime_manager.started:
+            runtime_manager.start(app)
         runtime_manager.mark_request_start()
 
     @app.after_request
