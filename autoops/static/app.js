@@ -45,7 +45,9 @@ const refs = {
   timeRangeSelect: document.getElementById("time-range-select"),
   autoRefreshToggle: document.getElementById("auto-refresh-toggle"),
   telemetryChart: document.getElementById("telemetry-chart"),
+  telemetryEmptyState: document.getElementById("telemetry-empty-state"),
   validationChart: document.getElementById("validation-chart"),
+  validationEmptyState: document.getElementById("validation-empty-state"),
   decisionBadge: document.getElementById("decision-badge"),
   decisionResult: document.getElementById("decision-result"),
   decisionConfidence: document.getElementById("decision-confidence"),
@@ -108,6 +110,23 @@ function createNode(tag, text, className) {
   return node;
 }
 
+function setChartEmptyState(element, message, visible) {
+  if (!element) return;
+  element.textContent = message;
+  element.classList.toggle("visible", Boolean(visible));
+}
+
+function formatTimestampLabel(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function hasMeaningfulSeries(values) {
+  return safeArray(values).some((value) => Number.isFinite(Number(value)));
+}
+
 function formatPercent(value) {
   return `${numberOr(value).toFixed(1)}%`;
 }
@@ -147,7 +166,16 @@ function createCharts() {
         resizeDelay: 150,
         plugins: { legend: { labels: { color: "#cfe0f6" } } },
         scales: {
-          x: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" } },
+          x: {
+            ticks: {
+              color: "#8da2bc",
+              autoSkip: true,
+              maxTicksLimit: 8,
+              maxRotation: 0,
+              minRotation: 0,
+            },
+            grid: { color: "rgba(255,255,255,0.05)" },
+          },
           y: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" }, suggestedMin: 0, suggestedMax: 100 },
           y1: { position: "right", ticks: { color: "#8da2bc" }, grid: { display: false } },
         },
@@ -172,7 +200,15 @@ function createCharts() {
         resizeDelay: 150,
         plugins: { legend: { labels: { color: "#cfe0f6" } } },
         scales: {
-          x: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" } },
+          x: {
+            ticks: {
+              color: "#8da2bc",
+              autoSkip: false,
+              maxRotation: 0,
+              minRotation: 0,
+            },
+            grid: { color: "rgba(255,255,255,0.05)" },
+          },
           y: { ticks: { color: "#8da2bc" }, grid: { color: "rgba(255,255,255,0.05)" }, suggestedMin: 0, suggestedMax: 100 },
         },
       },
@@ -322,13 +358,28 @@ function renderReasoning(decisions, feedbackSummary) {
 }
 
 function updateValidationChart(validation) {
-  if (!validation || !state.validationChart) return;
-  refs.validationBadge.textContent = `validation ${validation.validation_status || "pending"}`;
+  if (!state.validationChart) return;
+  if (!validation) {
+    refs.validationBadge.textContent = "No validation yet";
+    state.validationChart.data.datasets[0].data = [0, 0];
+    state.validationChart.data.datasets[1].data = [0, 0];
+    state.validationChart.update();
+    setChartEmptyState(refs.validationEmptyState, "No validation data yet.", true);
+    return;
+  }
+  refs.validationBadge.textContent = `Validation ${validation.validation_status || "pending"}`;
   const before = validation.before || {};
   const after = validation.after || {};
-  state.validationChart.data.datasets[0].data = [numberOr(before.cpu), numberOr(after.cpu)];
-  state.validationChart.data.datasets[1].data = [numberOr(before.memory), numberOr(after.memory)];
+  const cpuSeries = [numberOr(before.cpu), numberOr(after.cpu)];
+  const memorySeries = [numberOr(before.memory), numberOr(after.memory)];
+  state.validationChart.data.datasets[0].data = cpuSeries;
+  state.validationChart.data.datasets[1].data = memorySeries;
   state.validationChart.update();
+  setChartEmptyState(
+    refs.validationEmptyState,
+    "Validation data is present but does not yet contain meaningful before/after measurements.",
+    !hasMeaningfulSeries(cpuSeries) && !hasMeaningfulSeries(memorySeries),
+  );
 }
 
 async function loadStats() {
@@ -387,12 +438,34 @@ async function loadHistory() {
   const payload = await api(`/api/v1/history?limit=${state.timeRange}`);
   const history = safeArray(payload.data?.history);
   if (!state.chart) return;
-  state.chart.data.labels = history.map((item) => new Date(item.timestamp).toLocaleTimeString());
-  state.chart.data.datasets[0].data = history.map((item) => numberOr(item.metrics?.cpu));
-  state.chart.data.datasets[1].data = history.map((item) => numberOr(item.metrics?.memory));
-  state.chart.data.datasets[2].data = history.map((item) => numberOr(item.metrics?.disk));
-  state.chart.data.datasets[3].data = history.map((item) => numberOr(item.metrics?.network?.bytes_recv_per_sec) / 1024);
+  const labels = history.map((item) => formatTimestampLabel(item.timestamp));
+  const cpuSeries = history.map((item) => numberOr(item.metrics?.cpu, NaN));
+  const memorySeries = history.map((item) => numberOr(item.metrics?.memory, NaN));
+  const diskSeries = history.map((item) => numberOr(item.metrics?.disk, NaN));
+  const networkSeries = history.map((item) => {
+    const raw = item.metrics?.network?.bytes_recv_per_sec;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed / 1024 : NaN;
+  });
+  state.chart.data.labels = labels;
+  state.chart.data.datasets[0].data = cpuSeries;
+  state.chart.data.datasets[1].data = memorySeries;
+  state.chart.data.datasets[2].data = diskSeries;
+  state.chart.data.datasets[3].data = networkSeries;
   state.chart.update();
+  const sparseHistory = history.length < 2;
+  const noSeries =
+    !hasMeaningfulSeries(cpuSeries) &&
+    !hasMeaningfulSeries(memorySeries) &&
+    !hasMeaningfulSeries(diskSeries) &&
+    !hasMeaningfulSeries(networkSeries);
+  setChartEmptyState(
+    refs.telemetryEmptyState,
+    sparseHistory
+      ? "Telemetry history still building. Wait for a few more sampling intervals."
+      : "History loaded, but the plotted series are empty or malformed.",
+    sparseHistory || noSeries,
+  );
 }
 
 async function loadAlerts() {
@@ -487,21 +560,23 @@ async function loadFeedback() {
 
 async function loadValidation() {
   if (!state.latestActionId) {
-    refs.validationBadge.textContent = "No validation yet";
-    if (state.validationChart) {
-      state.validationChart.data.datasets[0].data = [0, 0];
-      state.validationChart.data.datasets[1].data = [0, 0];
-      state.validationChart.update();
-    }
+    updateValidationChart(null);
     return;
   }
   try {
     const payload = await api(`/api/v1/actions/${state.latestActionId}/validation`);
     updateValidationChart(payload.data.validation);
   } catch (error) {
-    if (error.status === 404) refs.validationBadge.textContent = "Validation pending";
-    else if (error.status === 401 || error.status === 403) refs.validationBadge.textContent = "Validation unauthorized";
-    else refs.validationBadge.textContent = "Validation unavailable";
+    if (error.status === 404) {
+      refs.validationBadge.textContent = "Validation pending";
+      setChartEmptyState(refs.validationEmptyState, "No validation data yet.", true);
+    } else if (error.status === 401 || error.status === 403) {
+      refs.validationBadge.textContent = "Validation unauthorized";
+      setChartEmptyState(refs.validationEmptyState, "Validation could not be loaded because access was denied.", true);
+    } else {
+      refs.validationBadge.textContent = "Validation unavailable";
+      setChartEmptyState(refs.validationEmptyState, "Validation data is temporarily unavailable.", true);
+    }
   }
 }
 

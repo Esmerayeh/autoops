@@ -90,9 +90,28 @@ a { color: inherit; }
 .progress-fill.neutral { background: linear-gradient(90deg, #60a5fa, #818cf8); }
 
 .chart-card { overflow: hidden; }
-.chart-card canvas { width: 100%; min-height: 280px; max-width: 100%; }
+.chart-card canvas { width: 100%; min-height: 240px; max-width: 100%; }
 .table-card, .timeline-card { min-height: 420px; }
 .command-card { min-height: 250px; }
+.chart-stage {
+  position: relative;
+  min-height: 240px;
+  margin-top: 10px;
+}
+.chart-empty-state {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+.chart-empty-state.visible { display: grid; }
 .table-shell { overflow: auto; margin-top: 14px; max-width: 100%; }
 table { width: 100%; border-collapse: collapse; font-size: 0.84rem; table-layout: fixed; }
 th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
@@ -129,6 +148,32 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.command-grid div {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.command-grid div span,
+.command-grid div strong,
+.host-grid div span,
+.host-grid div strong,
+.mini-stats div span,
+.mini-stats div strong {
+  display: block;
+}
+.command-grid div span,
+.host-grid div span,
+.mini-stats div span {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+}
+.command-grid div strong,
+.host-grid div strong,
+.mini-stats div strong {
+  font-size: 1rem;
+  line-height: 1.35;
+}
 .reasoning-copy { color: var(--muted); line-height: 1.6; }
 .reasoning-stack { display: grid; gap: 10px; margin-top: 14px; }
 .reasoning-item strong { display: block; margin-bottom: 6px; }
@@ -147,6 +192,11 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
 }
 .button-secondary { cursor: pointer; }
 .metric-value, .timeline-meta, td, th, .status-chip strong { overflow-wrap: anywhere; }
+.recommendations-card p,
+.reasoning-copy,
+.timeline-item div {
+  line-height: 1.55;
+}
 
 .auth-page { min-height: 100vh; display: grid; grid-template-columns: 1.15fr 0.85fr; }
 .auth-panel { padding: 48px; }
@@ -174,4 +224,5 @@ thead th { color: var(--muted); font-weight: 500; cursor: pointer; }
   .topbar, .hero-grid, .chart-grid, .dual-grid, .command-center-grid, .auth-page { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: 1fr; }
   .command-grid { grid-template-columns: 1fr; }
+  .chart-stage { min-height: 220px; }
 }
